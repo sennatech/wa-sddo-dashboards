@@ -1,0 +1,7 @@
+select_sql_sinistros = "SELECT * FROM sddo.sinistros"
+select_sql_emissoes =  "SELECT * FROM sddo.emissoes"
+select_sql_cotacoes =  "SELECT * FROM sddo.cotacoes"
+select_sql_pagamentos =  "SELECT * FROM sddo.pagamentos"
+select_sql_coberturas =  "SELECT * FROM sddo.coberturas"
+select_sql_clientes =  "SELECT * FROM sddo.clientes"
+select_sql_usuarios =  "SELECT * FROM sddo.usuarios"
