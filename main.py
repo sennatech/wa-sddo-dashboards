@@ -1,4 +1,5 @@
 import dash
+import queries
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects
@@ -9,9 +10,11 @@ from dash import Dash, html, dcc
 import tables_e_driver_sql as tb
 import dash_bootstrap_components as dbc
 import json
+import time
 from dash import Dash, dcc, html, Input, Output, callback
 
-brazil_states = json.load(open("venv/brazil_geo.json", "r"))
+
+# brazil_states = json.load(open("venv/brazil_geo.json", "r"))
 table_mapa_emissoes = tb.table_emissoes_unica[["insured_address_state","policy_amount","coverage_sum_insured","eventtime"]]
 table_mapa_emissoes_bh = table_mapa_emissoes[table_mapa_emissoes["insured_address_state"] == "BH"]
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.MORPH])
@@ -28,6 +31,9 @@ data_minima = tb.table_cotacoes["eventtime"].min()
 data_maxima = tb.table_emissoes_unica["eventtime"].max()
 num_cotation = tb.table_cotacoes["amount"].count()
 
+def atualizador():
+    num_cotation = tb.table_cotacoes["amount"].count()
+    return num_cotation
 
 #==============================================================================================================================
 
@@ -36,6 +42,11 @@ app.layout = (
         dbc.Row([
             dbc.Col([
                 html.Div([
+            dcc.Interval(
+                id='interval-component',
+                interval=1 * 1000,  # em milissegundos, atualização a cada 2 segundos
+                n_intervals=0
+            ),
                     html.H3("Dashboard Geral SDDO",style={"color":"#30679A"}),
                 ], style={}),
         dbc.Row([
@@ -48,7 +59,18 @@ app.layout = (
                                         display_format="DD MM YYYY",
                                         style={"border": "0px solid black","text-align": "center"}),
 
-                ])
+                ]),
+#                 html.Div([
+#                     dcc.Graph(id='graph-with-slider'),
+#                     dcc.Slider(
+#                     data_minima,
+#                     data_maxima,
+#                     step=None,
+#                     value=data_minima,
+#                     marks={str(year): str(year) for year in df['year'].unique()},
+#                     id='year-slider'
+#     )
+# ])
             ],md=4,style={"text-align": "center"}),
     dbc.Col([
                 html.P("Informe a causa do sinistro que deseja visualizar:", style={"margin-top": "50px","color":"#31999A","text-align": "center"}),
@@ -125,35 +147,65 @@ app.layout = (
 
                 ], md=3)
 
+
             ])
         ]),
 
     ))
 
 
-
 @app.callback(
-    [
-        Output("cotacoes", "children"),
-        Output("contrataçoes", "children"),
-        Output("sinistros_em_aberto", "children"),
-        Output("tempo_medio_resposta", "children"),
-        Output("Apolices-ativas", "children"),
-    ], [Input("date-picker", "date")]
+
+            Output("cotacoes", "children"),
+            Output("contrataçoes", "children"),
+            Output("sinistros_em_aberto", "children"),
+            Output("tempo_medio_resposta", "children"),
+            Output("Apolices-ativas", "children"),
+
+    [Input('interval-component', 'n_intervals')]
 )
-def display_status(date, location):
-    # print(location, date)
-    # df_data_on_date =
-    return None
-    recuperados_novos = "-" if df_data_on_date["Recuperadosnovos"].isna().values[0] else f'{int(df_data_on_date["Recuperadosnovos"].values[0]):,}'.replace(",", ".")
-    acompanhamentos_novos = "-" if df_data_on_date["emAcompanhamentoNovos"].isna().values[0]  else f'{int(df_data_on_date["emAcompanhamentoNovos"].values[0]):,}'.replace(",", ".")
-    casos_acumulados = "-" if df_data_on_date["casosAcumulado"].isna().values[0]  else f'{int(df_data_on_date["casosAcumulado"].values[0]):,}'.replace(",", ".")
-    casos_novos = "-" if df_data_on_date["casosNovos"].isna().values[0]  else f'{int(df_data_on_date["casosNovos"].values[0]):,}'.replace(",", ".")
-    obitos_acumulado = "-" if df_data_on_date["obitosAcumulado"].isna().values[0]  else f'{int(df_data_on_date["obitosAcumulado"].values[0]):,}'.replace(",", ".")
-    obitos_novos = "-" if df_data_on_date["obitosNovos"].isna().values[0]  else f'{int(df_data_on_date["obitosNovos"].values[0]):,}'.replace(",", ".")
-    return None
+def update_graph(n_intervals):
+    table_cotacoes = fc.transforma_query_em_sql(queries.select_sql_cotacoes)
+    num_cotacoes  = table_cotacoes.shape[0]
+    table_emissoes_unica = pd.DataFrame(fc.retira_duplicadas_calcula_validade_policy_emissao(fc.transforma_query_em_sql(queries.select_sql_emissoes))).reset_index()
+    num_emissoes = table_emissoes_unica.shape[0]
+    table_sinistros_unica = table_sinistros_unica = pd.DataFrame(fc.retira_duplicadas_sinistro(fc.transforma_query_em_sql(queries.select_sql_sinistros))).reset_index()
+    sinistros_em_aberto = table_sinistros_unica[table_sinistros_unica["status_sinistro"] == "PENDENTE"].shape[0]
+    media_resp_sinistro = fc.calcula_tempo_medio_aprovacao_sinistro(table_sinistros_unica)
+    apolices_ativas = table_emissoes_unica.shape[0]
+
+    return num_cotacoes,num_emissoes,sinistros_em_aberto,media_resp_sinistro,apolices_ativas
+
+# @app.callback(
+#     [
+#         Output("cotacoes", "children"),
+#         Output("contrataçoes", "children"),
+#         Output("sinistros_em_aberto", "children"),
+#         Output("tempo_medio_resposta", "children"),
+#         Output("Apolices-ativas", "children"),
+#     ], [Input("date-picker", "date")]
+# )
+# def display_status(date):
+#     num_cotation_1 = num_cotation
+#     return (num_cotation_1,2,3,4,5)
+
+# def display_status():
+#     # print(location, date)
+#     # df_data_on_date =
+#     # return 1,2,3,4,5
+#
+#
+#     recuperados_novos = "-" if df_data_on_date["Recuperadosnovos"].isna().values[0] else f'{int(df_data_on_date["Recuperadosnovos"].values[0]):,}'.replace(",", ".")
+#     acompanhamentos_novos = "-" if df_data_on_date["emAcompanhamentoNovos"].isna().values[0]  else f'{int(df_data_on_date["emAcompanhamentoNovos"].values[0]):,}'.replace(",", ".")
+#     casos_acumulados = "-" if df_data_on_date["casosAcumulado"].isna().values[0]  else f'{int(df_data_on_date["casosAcumulado"].values[0]):,}'.replace(",", ".")
+#     casos_novos = "-" if df_data_on_date["casosNovos"].isna().values[0]  else f'{int(df_data_on_date["casosNovos"].values[0]):,}'.replace(",", ".")
+#     obitos_acumulado = "-" if df_data_on_date["obitosAcumulado"].isna().values[0]  else f'{int(df_data_on_date["obitosAcumulado"].values[0]):,}'.replace(",", ".")
+#     obitos_novos = "-" if df_data_on_date["obitosNovos"].isna().values[0]  else f'{int(df_data_on_date["obitosNovos"].values[0]):,}'.replace(",", ".")
+#     return 1,2,3,4,5
+
 
 if __name__ == "__main__":
+    num_cotation = tb.table_cotacoes["amount"].count()
     app.run_server(debug=True)
 
 

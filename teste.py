@@ -1,7 +1,8 @@
 import json
 
 import pandas as pd
-
+import funcoes as fc
+import queries
 import  tables_e_driver_sql as tb
 # brazil_states = json.load(open("venv/brazil_geo.json", "r"))
 #
@@ -23,8 +24,3 @@ import  tables_e_driver_sql as tb
 # ])
 # print(tb.select_columns)
 # select_columns = [tb.select_columns]
-# for i in select_columns:
-#     [select_columns_1] = select_columns
-# print(select_columns_1[0])
-
-print(tb.media_resp_sinistro)

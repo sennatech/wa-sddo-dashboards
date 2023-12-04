@@ -79,17 +79,17 @@ def calcula_tempo_medio_aprovacao_sinistro(dataframe_sinistros):
     if 'eventtime' not in dataframe_sinistros.columns or 'id' not in dataframe_sinistros.columns or 'status_sinistro' not in dataframe_sinistros.columns:
         raise ValueError("O dataset deve conter colunas 'id', 'eventtime' e 'status_sinistro'.")
     pendentes = dataframe_sinistros[dataframe_sinistros['status_sinistro'] == 'PENDENTE']
-    print(pendentes)
+    # print(pendentes)
     aprovados = dataframe_sinistros[dataframe_sinistros['status_sinistro'] == 'APROVADO']
-    print(aprovados)
+    # print(aprovados)
 
     merge_result = pd.merge(pendentes, aprovados, on='id_notification', suffixes=('_pendente', '_aprovado'))
     merge_result['diferenca_eventtime'] = (merge_result['eventtime_aprovado'] - merge_result['eventtime_pendente']).dt.total_seconds()
     merge_result['diferenca_eventtime'] /= 3600
-    print(f"aaaaaaaaaaaaaaaaaaaaaaaa merge_result\n {merge_result}")
+    # print(f"aaaaaaaaaaaaaaaaaaaaaaaa merge_result\n {merge_result}")
     media_diferenca_eventtime = merge_result['diferenca_eventtime'].mean()
     media_arredondada = round(media_diferenca_eventtime,3)
-    print(media_arredondada)
+    # print(media_arredondada)
     # dataframe_sinistros.insert(loc=1, column="TempoMedioResposta", value=media_arredondada)
 
     return media_arredondada
