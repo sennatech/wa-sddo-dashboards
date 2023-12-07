@@ -1,5 +1,5 @@
 import json
-
+import plotly.express as px
 import pandas as pd
 import funcoes as fc
 import queries
@@ -24,3 +24,18 @@ import  tables_e_driver_sql as tb
 # ])
 # print(tb.select_columns)
 # select_columns = [tb.select_columns]
+print(tb.table_sinistros_unica.columns)
+def plotar_grafico_barras(dataframe):
+    # Certifique-se de que a coluna 'eventtime' está no formato datetime
+    dataframe['date'] = pd.to_datetime(dataframe['date'])
+
+    # Agrupe os dados por 'eventtime' e conte a quantidade de eventos em cada intervalo de tempo
+    eventos_por_tempo = dataframe.groupby('date').size().reset_index(name='quantidade')
+    print(eventos_por_tempo)
+    # Plote o gráfico de barras usando Plotly Express
+    fig = px.bar(eventos_por_tempo, x='date', y='quantidade', title='Quantidade de Eventos por Tempo')
+
+    # Exiba o gráfico
+    fig.show()
+
+plotar_grafico_barras(tb.table_sinistros_unica)

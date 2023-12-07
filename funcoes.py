@@ -21,11 +21,13 @@ connection_string = textwrap.dedent(f'''
 cnxn: pyodbc.Connection = pyodbc.connect(connection_string)
 crsr: pyodbc.Cursor = cnxn.cursor()
 def transforma_query_em_sql(sql_query):
+    crsr: pyodbc.Cursor = cnxn.cursor()
     crsr.execute(sql_query)
     colunas = [i[0] for i in crsr.description]
     dados = crsr.fetchall()
     data = [tuple(rows) for rows in dados]
     df = pd.DataFrame(data, columns=colunas)
+    crsr.close()
     return df
 
 def retira_duplicadas_sinistro(dataframe_sinistros):

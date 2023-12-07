@@ -3,7 +3,6 @@ import pyodbc
 import textwrap
 import queries
 import funcoes as fc
-import funcoes1 as fc1
 import pandas as pd
 
 

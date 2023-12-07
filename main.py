@@ -5,7 +5,6 @@ import plotly.express as px
 import plotly.graph_objects
 import plotly.graph_objects as go
 import funcoes as fc
-import funcoes1 as fc1
 from dash import Dash, html, dcc
 import tables_e_driver_sql as tb
 import dash_bootstrap_components as dbc
@@ -31,9 +30,7 @@ data_minima = tb.table_cotacoes["eventtime"].min()
 data_maxima = tb.table_emissoes_unica["eventtime"].max()
 num_cotation = tb.table_cotacoes["amount"].count()
 
-def atualizador():
-    num_cotation = tb.table_cotacoes["amount"].count()
-    return num_cotation
+
 
 #==============================================================================================================================
 
@@ -44,7 +41,7 @@ app.layout = (
                 html.Div([
             dcc.Interval(
                 id='interval-component',
-                interval=1 * 1000,  # em milissegundos, atualização a cada 2 segundos
+                interval=2 * 1000,  # em milissegundos, atualização a cada 2 segundos
                 n_intervals=0
             ),
                     html.H3("Dashboard Geral SDDO",style={"color":"#30679A"}),
@@ -148,12 +145,86 @@ app.layout = (
                 ], md=3)
 
 
+            ]),
+            dbc.Row([
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.Span("Sinistros Aprovados"),
+                            html.H3(style={"color": "#001322","text-align": "center"}, id="sinistros_aprovados"),
+                        ])
+                    ], color="#30679A", outline=True,style={"margin-top":"20px",
+                                                          "box-shadow": "0 4px 4px 0 rgba(0,0,0,0.15), 0 4px 20px 0 rgba(0,0,0, 0.19),",
+                                                          "color": "#31999A","text-align": "center"})
+
+                ], md=4),
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.Span("Sinistros Recusados"),
+                            html.H3(style={"color": "#001322"}, id="sinistros_Recusados"),
+                        ])
+                    ], color="#30679A", outline=True,style={"margin-top":"20px",
+                                                          "box-shadow": "0 4px 4px 0 rgba(0,0,0,0.15), 0 4px 20px 0 rgba(0,0,0, 0.19),",
+                                                          "color": "#31999A","text-align": "center"})
+
+                ], md=4),
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.Span("Ticket Medio/Prêmio total"),
+                            html.H3(style={"color": "#001322","text-align": "center"}, id="ticket_medio"),
+                        ])
+                    ], color="#30679A", outline=True, style={"margin-top": "20px",
+                                                           "box-shadow": "0 4px 4px 0 rgba(0,0,0,0.15), 0 4px 20px 0 rgba(0,0,0, 0.19),",
+                                                           "color": "#31999A","text-align": "center"})
+
+                ], md=4)
+
+
+            ]),
+            dbc.Row([
+                dbc.Col(dcc.Graph(id="sinistros_avisados")
+                , md=4),
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.Span("Sinistros em Regulação"),
+                            html.H3(style={"color": "#001322"}, id="sinistros_em_regulacao"),
+
+                        ])
+                    ], color="#30679A", outline=True,style={"margin-top":"20px",
+                                                          "box-shadow": "0 4px 4px 0 rgba(0,0,0,0.15), 0 4px 20px 0 rgba(0,0,0, 0.19),",
+                                                          "color": "#31999A","text-align": "center"})
+
+                ], md=4),
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardBody([
+                            html.Span("Apolices X Sinistros"),
+                            html.H3(style={"color": "#001322", "text-align": "center"}, id="Apolices_ativas2"),
+                            html.H3(style={"color": "#001322","text-align": "center"}, id="apolices_x_sinistros"),
+                        ])
+                    ], color="#30679A", outline=True, style={"margin-top": "20px",
+                                                           "box-shadow": "0 4px 4px 0 rgba(0,0,0,0.15), 0 4px 20px 0 rgba(0,0,0, 0.19),",
+                                                           "color": "#31999A","text-align": "center"})
+
+                ], md=4)
+
+
             ])
         ]),
 
     ))
 
+def plotar_grafico_barras(dataframe):
+    dataframe['date'] = pd.to_datetime(dataframe['date'])
 
+    eventos_por_tempo = dataframe.groupby('date').size().reset_index(name='quantidade')
+    fig = px.bar(eventos_por_tempo, x='date', y='quantidade', title='Quantidade de Eventos por Tempo')
+
+    # Exiba o gráfico
+    return fig
 @app.callback(
 
             Output("cotacoes", "children"),
@@ -161,6 +232,7 @@ app.layout = (
             Output("sinistros_em_aberto", "children"),
             Output("tempo_medio_resposta", "children"),
             Output("Apolices-ativas", "children"),
+            Output("sinistros_avisados","figure"),
 
     [Input('interval-component', 'n_intervals')]
 )
@@ -173,8 +245,12 @@ def update_graph(n_intervals):
     sinistros_em_aberto = table_sinistros_unica[table_sinistros_unica["status_sinistro"] == "PENDENTE"].shape[0]
     media_resp_sinistro = fc.calcula_tempo_medio_aprovacao_sinistro(table_sinistros_unica)
     apolices_ativas = table_emissoes_unica.shape[0]
+    sinistros_avisados = plotar_grafico_barras(table_sinistros_unica)
 
-    return num_cotacoes,num_emissoes,sinistros_em_aberto,media_resp_sinistro,apolices_ativas
+
+
+    return num_cotacoes,num_emissoes,sinistros_em_aberto,media_resp_sinistro,apolices_ativas,sinistros_avisados
+
 
 # @app.callback(
 #     [
