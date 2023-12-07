@@ -217,11 +217,11 @@ app.layout = (
 
     ))
 
-def plotar_grafico_barras(dataframe):
+def plotar_grafico_barras(dataframe,titulo):
     dataframe['date'] = pd.to_datetime(dataframe['date'])
 
     eventos_por_tempo = dataframe.groupby('date').size().reset_index(name='quantidade')
-    fig = px.bar(eventos_por_tempo, x='date', y='quantidade', title='Quantidade de Eventos por Tempo')
+    fig = px.bar(eventos_por_tempo, x='date', y='quantidade', title= titulo)
 
     # Exiba o gráfico
     return fig
@@ -245,7 +245,7 @@ def update_graph(n_intervals):
     sinistros_em_aberto = table_sinistros_unica[table_sinistros_unica["status_sinistro"] == "PENDENTE"].shape[0]
     media_resp_sinistro = fc.calcula_tempo_medio_aprovacao_sinistro(table_sinistros_unica)
     apolices_ativas = table_emissoes_unica.shape[0]
-    sinistros_avisados = plotar_grafico_barras(table_sinistros_unica)
+    sinistros_avisados = plotar_grafico_barras(table_sinistros_unica,"Quantidade de Eventos por Tempo")
 
 
 
