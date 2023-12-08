@@ -18,11 +18,11 @@ table_cotacoes = fc.transforma_query_em_sql(queries.select_sql_cotacoes)
 num_cotacoes = table_cotacoes.shape[0]
 table_emissoes_unica = pd.DataFrame(fc.retira_duplicadas_calcula_validade_policy_emissao(fc.transforma_query_em_sql(queries.select_sql_emissoes))).reset_index()
 num_emissoes = table_emissoes_unica.shape[0]
-table_sinistros_unica = table_sinistros_unica = pd.DataFrame(fc.retira_duplicadas_sinistro(fc.transforma_query_em_sql(queries.select_sql_sinistros))).reset_index()
+table_sinistros_unica = pd.DataFrame(fc.retira_duplicadas_sinistro(fc.transforma_query_em_sql(queries.select_sql_sinistros))).reset_index()
 sinistros_em_aberto = table_sinistros_unica[table_sinistros_unica["status_sinistro"] == "PENDENTE"]
 sinistros_aprovados = table_sinistros_unica[table_sinistros_unica["status_sinistro"] == "APROVADO"]
 sinistros_recusados = table_sinistros_unica[table_sinistros_unica["status_sinistro"] == "RECUSADO"]
-media_resp_sinistro = fc.calcula_validade_policy_emissao(table_sinistros_unica)
+media_resp_sinistro = fc.calcula_tempo_medio_sinistro(tb.table_sinistros)
 apolices_ativas = table_emissoes_unica.shape[0]
 ticket_medio = (table_emissoes_unica["issuance_amount"].sum()/num_emissoes)
 # sinistros_avisados = plotar_grafico_barras(table_sinistros_unica)
@@ -43,7 +43,7 @@ fig_causa_pendente = main.plotar_grafico_barras(df_filtrado_pendente,'Sinistros:
 fig_cotacoes_emissoes = plotar_grafico_pizza(table_cotacoes,table_emissoes_unica,"Cotacoes X Emissoes")
 fig_sinistros_aprovados = main.plotar_grafico_barras(df_filtrado_aprovados,'Sinistros: Aprovados')
 fig_sinistros_recusados = main.plotar_grafico_barras(df_filtrado_recusado,'Sinistros: Recusados')
-fig_apolices_sinistros_apolices = plotar_grafico_pizza(table_emissoes_unica,table_sinistros_unica,"Cotações X Emissões")
+fig_apolices_sinistros_apolices = plotar_grafico_pizza(table_emissoes_unica,table_sinistros_unica,"Sinistros X Apolices")
 col1.metric(label="TicketMêdio", value=ticket_medio)
 col2.metric(label="Sinistros em Aberto", value=sinistros_em_aberto.shape[0])
 col3.metric(label="Tempo Medio de Resposta", value=media_resp_sinistro)

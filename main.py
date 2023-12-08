@@ -243,7 +243,7 @@ def update_graph(n_intervals):
     num_emissoes = table_emissoes_unica.shape[0]
     table_sinistros_unica = table_sinistros_unica = pd.DataFrame(fc.retira_duplicadas_sinistro(fc.transforma_query_em_sql(queries.select_sql_sinistros))).reset_index()
     sinistros_em_aberto = table_sinistros_unica[table_sinistros_unica["status_sinistro"] == "PENDENTE"].shape[0]
-    media_resp_sinistro = fc.calcula_tempo_medio_aprovacao_sinistro(table_sinistros_unica)
+    media_resp_sinistro = fc.calcula_tempo_medio_sinistro(table_sinistros_unica)
     apolices_ativas = table_emissoes_unica.shape[0]
     sinistros_avisados = plotar_grafico_barras(table_sinistros_unica,"Quantidade de Eventos por Tempo")
 

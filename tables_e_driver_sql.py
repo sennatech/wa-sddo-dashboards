@@ -24,5 +24,5 @@ for i in select_columns:
 
 state_unico = table_sinistros_unica.drop_duplicates(subset="state")
 state_unico = state_unico["state"]
-media_resp_sinistro = fc.calcula_tempo_medio_aprovacao_sinistro(table_sinistros)
+media_resp_sinistro = fc.calcula_tempo_medio_sinistro(table_sinistros)
 # print(media_resp_sinistro)
