@@ -20,7 +20,9 @@ table_emissoes_unica = pd.DataFrame(fc.retira_duplicadas_calcula_validade_policy
 num_emissoes = table_emissoes_unica.shape[0]
 table_sinistros_unica = table_sinistros_unica = pd.DataFrame(fc.retira_duplicadas_sinistro(fc.transforma_query_em_sql(queries.select_sql_sinistros))).reset_index()
 sinistros_em_aberto = table_sinistros_unica[table_sinistros_unica["status_sinistro"] == "PENDENTE"]
-media_resp_sinistro = fc.calcula_tempo_medio_aprovacao_sinistro(table_sinistros_unica)
+sinistros_aprovados = table_sinistros_unica[table_sinistros_unica["status_sinistro"] == "APROVADO"]
+sinistros_recusados = table_sinistros_unica[table_sinistros_unica["status_sinistro"] == "RECUSADO"]
+media_resp_sinistro = fc.calcula_validade_policy_emissao(table_sinistros_unica)
 apolices_ativas = table_emissoes_unica.shape[0]
 ticket_medio = (table_emissoes_unica["issuance_amount"].sum()/num_emissoes)
 # sinistros_avisados = plotar_grafico_barras(table_sinistros_unica)
@@ -31,11 +33,17 @@ print(sinistros_em_aberto)
 causa = st.sidebar.selectbox("causa", table_sinistros_unica["notificationType"].unique())
 df_filtrado  = table_sinistros_unica[table_sinistros_unica["notificationType"] == causa ]
 df_filtrado_pendente = sinistros_em_aberto[sinistros_em_aberto["notificationType"] == causa ]
+df_filtrado_aprovados = sinistros_aprovados[sinistros_aprovados["notificationType"] == causa ]
+df_filtrado_recusado = sinistros_recusados[sinistros_recusados["notificationType"] == causa ]
 col1, col2, col3, col4 = st.columns(4)
 col5, col6, col7  = st.columns(3)
-fig_causa_geral = main.plotar_grafico_barras(df_filtrado,"Quantidade de sinistros  por Tempo")
-fig_causa_pendente = main.plotar_grafico_barras(df_filtrado_pendente,'Quantidade de sinistros pendentes por Tempo')
+col8,col9,col10 = st.columns(3)
+fig_causa_geral = main.plotar_grafico_barras(df_filtrado,"Sinistros: Avisados")
+fig_causa_pendente = main.plotar_grafico_barras(df_filtrado_pendente,'Sinistros: Pendentes')
 fig_cotacoes_emissoes = plotar_grafico_pizza(table_cotacoes,table_emissoes_unica,"Cotacoes X Emissoes")
+fig_sinistros_aprovados = main.plotar_grafico_barras(df_filtrado_aprovados,'Sinistros: Aprovados')
+fig_sinistros_recusados = main.plotar_grafico_barras(df_filtrado_recusado,'Sinistros: Recusados')
+fig_apolices_sinistros_apolices = plotar_grafico_pizza(table_emissoes_unica,table_sinistros_unica,"Cotações X Emissões")
 col1.metric(label="TicketMêdio", value=ticket_medio)
 col2.metric(label="Sinistros em Aberto", value=sinistros_em_aberto.shape[0])
 col3.metric(label="Tempo Medio de Resposta", value=media_resp_sinistro)
@@ -43,3 +51,6 @@ col4.metric(label="Apolices Ativas", value=apolices_ativas)
 col5.plotly_chart(fig_causa_geral)
 col6.plotly_chart(fig_causa_pendente)
 col7.plotly_chart(fig_cotacoes_emissoes)
+col8.plotly_chart(fig_sinistros_aprovados)
+col9.plotly_chart(fig_sinistros_recusados)
+col10.plotly_chart(fig_apolices_sinistros_apolices)
