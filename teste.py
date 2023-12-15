@@ -24,6 +24,7 @@ import  tables_e_driver_sql as tb
 # ])
 # print(tb.select_columns)
 # select_columns = [tb.select_columns]
-print(tb.table_sinistros)
-media_resp_sinistro = fc.calcula_tempo_medio_sinistro(tb.table_sinistros)
-print(media_resp_sinistro)
+table_sinistros = tb.table_sinistros
+print(table_sinistros.shape)
+table_sinistros_unica = pd.DataFrame(fc.retira_duplicadas_sinistro(fc.transforma_query_em_sql(queries.select_sql_sinistros))).reset_index()
+print(table_sinistros_unica.shape)

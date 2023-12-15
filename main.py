@@ -111,8 +111,8 @@ app.layout = (
                 dbc.Col([
                     dbc.Card([
                         dbc.CardBody([
-                            html.Span("Sinistros em aberto"),
-                            html.H3(style={"color": "#001322","text-align": "center"}, id="sinistros_em_aberto"),
+                            html.Span("Ticket Médio"),
+                            html.H3(style={"color": "#001322","text-align": "center"}, id="ticket_medio"),
                         ])
                     ], color="#30679A", outline=True,style={"margin-top":"10px",
                                                           "box-shadow": "0 4px 4px 0 rgba(0,0,0,0.15), 0 4px 20px 0 rgba(0,0,0, 0.19),",
@@ -122,10 +122,8 @@ app.layout = (
                 dbc.Col([
                     dbc.Card([
                         dbc.CardBody([
-                            html.Span("Tempo medio de resposta"),
-                            html.H3(style={"color": "#001322"}, id="tempo_medio_resposta"),
-                            html.H6("(em horas)", style={"color": "#31999A","text-align": "center"}),
-
+                            html.Span("Prêmio Total"),
+                            html.H3(style={"color": "#001322"}, id="premio_total"),
                         ])
                     ], color="#30679A", outline=True,style={"margin-top":"10px",
                                                           "box-shadow": "0 4px 4px 0 rgba(0,0,0,0.15), 0 4px 20px 0 rgba(0,0,0, 0.19),",
@@ -135,8 +133,9 @@ app.layout = (
                 dbc.Col([
                     dbc.Card([
                         dbc.CardBody([
-                            html.Span("Apolices Ativas"),
-                            html.H3(style={"color": "#001322","text-align": "center"}, id="Apolices-ativas"),
+                            html.Span("Tempo Médio de Resposta Sinistro"),
+                            html.H3(style={"color": "#001322","text-align": "center"}, id="tempo_medio_resposta"),
+                            html.H6("(em horas)", style={"color": "#31999A", "text-align": "center"}),
                         ])
                     ], color="#30679A", outline=True, style={"margin-top": "10px",
                                                            "box-shadow": "0 4px 4px 0 rgba(0,0,0,0.15), 0 4px 20px 0 rgba(0,0,0, 0.19),",
@@ -150,106 +149,85 @@ app.layout = (
                 dbc.Col([
                     dbc.Card([
                         dbc.CardBody([
-                            html.Span("Sinistros Aprovados"),
-                            html.H3(style={"color": "#001322","text-align": "center"}, id="sinistros_aprovados"),
+                            html.Span("Sinistro: STATUS"),
+                            html.H3(style={"color": "#001322","text-align": "center"}, id="status_sinistro"),
                         ])
                     ], color="#30679A", outline=True,style={"margin-top":"20px",
                                                           "box-shadow": "0 4px 4px 0 rgba(0,0,0,0.15), 0 4px 20px 0 rgba(0,0,0, 0.19),",
                                                           "color": "#31999A","text-align": "center"})
 
-                ], md=4),
+                ], md=6),
                 dbc.Col([
                     dbc.Card([
                         dbc.CardBody([
-                            html.Span("Sinistros Recusados"),
-                            html.H3(style={"color": "#001322"}, id="sinistros_Recusados"),
+                            html.Span("Apolices Ativas"),
+                            html.H3(style={"color": "#001322"}, id="apolices_ativas"),
                         ])
                     ], color="#30679A", outline=True,style={"margin-top":"20px",
                                                           "box-shadow": "0 4px 4px 0 rgba(0,0,0,0.15), 0 4px 20px 0 rgba(0,0,0, 0.19),",
                                                           "color": "#31999A","text-align": "center"})
-
-                ], md=4),
+                ], md=3),
                 dbc.Col([
                     dbc.Card([
                         dbc.CardBody([
-                            html.Span("Ticket Medio/Prêmio total"),
-                            html.H3(style={"color": "#001322","text-align": "center"}, id="ticket_medio"),
+                            html.Span("Total de sinistros"),
+                            html.H3(style={"color": "#001322","text-align": "center"}, id="total_sinistros"),
                         ])
-                    ], color="#30679A", outline=True, style={"margin-top": "20px",
-                                                           "box-shadow": "0 4px 4px 0 rgba(0,0,0,0.15), 0 4px 20px 0 rgba(0,0,0, 0.19),",
-                                                           "color": "#31999A","text-align": "center"})
-
-                ], md=4)
+                    ], color="#30679A", outline=True,style={"margin-top":"20px",
+                                                          "box-shadow": "0 4px 4px 0 rgba(0,0,0,0.15), 0 4px 20px 0 rgba(0,0,0, 0.19),",
+                                                          "color": "#31999A","text-align": "center"})],md=3)
 
 
             ]),
-            dbc.Row([
-                dbc.Col(dcc.Graph(id="sinistros_avisados")
-                , md=4),
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardBody([
-                            html.Span("Sinistros em Regulação"),
-                            html.H3(style={"color": "#001322"}, id="sinistros_em_regulacao"),
-
-                        ])
-                    ], color="#30679A", outline=True,style={"margin-top":"20px",
-                                                          "box-shadow": "0 4px 4px 0 rgba(0,0,0,0.15), 0 4px 20px 0 rgba(0,0,0, 0.19),",
-                                                          "color": "#31999A","text-align": "center"})
-
-                ], md=4),
-                dbc.Col([
-                    dbc.Card([
-                        dbc.CardBody([
-                            html.Span("Apolices X Sinistros"),
-                            html.H3(style={"color": "#001322", "text-align": "center"}, id="Apolices_ativas2"),
-                            html.H3(style={"color": "#001322","text-align": "center"}, id="apolices_x_sinistros"),
-                        ])
-                    ], color="#30679A", outline=True, style={"margin-top": "20px",
-                                                           "box-shadow": "0 4px 4px 0 rgba(0,0,0,0.15), 0 4px 20px 0 rgba(0,0,0, 0.19),",
-                                                           "color": "#31999A","text-align": "center"})
-
-                ], md=4)
-
-
-            ])
         ]),
 
     ))
 
 def plotar_grafico_barras(dataframe,titulo):
-    dataframe['date'] = pd.to_datetime(dataframe['date'])
+    dataframe.loc[:, 'date'] = pd.to_datetime(dataframe['date'])
 
     eventos_por_tempo = dataframe.groupby('date').size().reset_index(name='quantidade')
     fig = px.bar(eventos_por_tempo, x='date', y='quantidade', title= titulo)
 
     # Exiba o gráfico
     return fig
+
+def plotar_grafico_pizza(cotacao,emissoes,titulo):
+    num_cotacoes = cotacao.shape[0]
+    num_emissoes = emissoes.shape[0]
+
+    fig = px.pie( values=[num_cotacoes,num_emissoes] ,title= titulo)
+    return fig
 @app.callback(
 
             Output("cotacoes", "children"),
-            Output("contrataçoes", "children"),
-            Output("sinistros_em_aberto", "children"),
+            # Output("contrataçoes", "children"),
+            Output("ticket_medio", "children"),
+            Output("premio_total", "children"),
             Output("tempo_medio_resposta", "children"),
-            Output("Apolices-ativas", "children"),
-            Output("sinistros_avisados","figure"),
+            Output("apolices_ativas", "children"),
+            Output("total_sinistros", "children"),
 
     [Input('interval-component', 'n_intervals')]
 )
-def update_graph(n_intervals):
+def update_dash(n_intervals):
     table_cotacoes = fc.transforma_query_em_sql(queries.select_sql_cotacoes)
     num_cotacoes  = table_cotacoes.shape[0]
+    table_sinistros = pd.DataFrame(fc.transforma_query_em_sql(queries.select_sql_sinistros))
     table_emissoes_unica = pd.DataFrame(fc.retira_duplicadas_calcula_validade_policy_emissao(fc.transforma_query_em_sql(queries.select_sql_emissoes))).reset_index()
     num_emissoes = table_emissoes_unica.shape[0]
     table_sinistros_unica = table_sinistros_unica = pd.DataFrame(fc.retira_duplicadas_sinistro(fc.transforma_query_em_sql(queries.select_sql_sinistros))).reset_index()
+    ticket_medio = "R$"+ str(round(table_emissoes_unica["issuance_amount"].sum() / num_emissoes))
+    premio_total = "R$"+ str(table_emissoes_unica["policy_amount"].sum())
     sinistros_em_aberto = table_sinistros_unica[table_sinistros_unica["status_sinistro"] == "PENDENTE"].shape[0]
-    media_resp_sinistro = fc.calcula_tempo_medio_sinistro(table_sinistros_unica)
+    sinistros_aprovados = table_sinistros_unica[table_sinistros_unica["status_sinistro"] == "APROVADO"]
+    tempo_medio_resposta = fc.calcula_tempo_medio_sinistro(table_sinistros)
     apolices_ativas = table_emissoes_unica.shape[0]
+    total_de_sinistros = table_sinistros_unica.shape[0]
     sinistros_avisados = plotar_grafico_barras(table_sinistros_unica,"Quantidade de Eventos por Tempo")
+    cotacoes_x_emissoes = str(num_cotacoes)+ " " +  "X" + " " + str(num_emissoes)
 
-
-
-    return num_cotacoes,num_emissoes,sinistros_em_aberto,media_resp_sinistro,apolices_ativas,sinistros_avisados
+    return cotacoes_x_emissoes,ticket_medio,premio_total,tempo_medio_resposta,apolices_ativas,total_de_sinistros
 
 
 # @app.callback(

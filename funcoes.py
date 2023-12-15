@@ -31,8 +31,10 @@ def transforma_query_em_sql(sql_query):
     return df
 
 def retira_duplicadas_sinistro(dataframe_sinistros):
+    # print(dataframe_sinistros)
     database_sorted = dataframe_sinistros.sort_values(by='status_sinistro')
-    mask = database_sorted.duplicated(subset='id') & (database_sorted['status_sinistro'] == "PENDENTE")
+    mask = database_sorted.duplicated(subset='id_notification') & (database_sorted['status_sinistro'] == "PENDENTE")
+    # print(mask)
     rows_to_drop = database_sorted.index[mask]
     filtered_dataset = database_sorted.drop(rows_to_drop)
     return filtered_dataset
@@ -102,13 +104,10 @@ def calcula_tempo_medio_sinistro(dataframe_sinistros):
         raise ValueError("O dataset deve conter colunas 'id', 'eventtime' e 'status_sinistro'.")
 
     pendentes = dataframe_sinistros[dataframe_sinistros['status_sinistro'] == 'PENDENTE']
-    print(f"--------------------pendentes-------------------\n{pendentes["status_sinistro"]}")
     analisado = dataframe_sinistros[
         (dataframe_sinistros['status_sinistro'] == 'APROVADO') | (dataframe_sinistros['status_sinistro'] == 'RECUSADO')]
-    print(f"--------------------aprovados-------------------\n{analisado["status_sinistro"]}")
 
     merge_result = pd.merge(pendentes, analisado, on='id_notification', suffixes=('_pendente', '_analisado'))
-    print(f"--------------------aprovados-------------------\n{merge_result}")
 
     merge_result['diferenca_eventtime'] = (
                 merge_result['eventtime_analisado'] - merge_result['eventtime_pendente']).dt.total_seconds()
