@@ -6,10 +6,13 @@ import tables_e_queries as tb
 import polars as pl
 import pyarrow
 import dash_bootstrap_components as dbc
+import locale
+locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
+
 
 # Instanciar o aplicativo Dash
 
-app = Dash(__name__, external_stylesheets=[dbc.themes.DARKLY],routes_pathname_prefix='/', requests_pathname_prefix='/')
+app = Dash(__name__,routes_pathname_prefix='/', requests_pathname_prefix='/')
 
 #ativado para se quebrar a aplicação não aparecer para o cliente
 app.config.suppress_callback_exceptions = True
@@ -21,16 +24,108 @@ app.server.config.update(
 )
 
 # Definir o layout do aplicativo
-app.layout =html.Div([
-    dcc.Graph(id='dashPeriodo'),
-    dcc.Graph(id='dash_sinistros_avisados'),
-    dcc.Graph(id='dash_status_sinistro'),
-    dcc.Interval(
-        id='interval-component',
-        interval=2 * 1000,  # em milissegundos
-        n_intervals=0
-    )
-])
+app.layout = html.Div(
+    [
+        dcc.Interval(
+            id='interval-component',
+            interval=2 * 1000,  # em milissegundos
+            n_intervals=0
+        ),
+        html.Div(
+            [
+                html.Div(
+                    [
+                        html.Div('Cotações x Contratações', className='card-title'),
+                        html.Div(
+                            [
+                                html.Div(id='cotacoes', className='card-number'),
+                                html.Div(id='contratacoes', className='card-number'),
+                            ],
+                            className='card-content'
+                        ),
+                    ],
+                    className='three columns card'
+                ),
+                html.Div(
+                    [
+                        html.Div('Ticket Médio', className='card-title'),
+                        html.Div(
+                            [
+                                html.Div(id='ticket-medio', className='card-number'),
+                            ],
+                            className='card-content'
+                        ),
+                    ],
+                    className='three columns card'
+                ),
+                html.Div(
+                    [
+                        html.Div('Ticket Total', className='card-title'),
+                        html.Div(
+                            [
+                                html.Div(id='ticket-total', className='card-number'),
+                            ],
+                            className='card-content'
+                        ),
+                    ],
+                    className='three columns card'
+                ),
+                html.Div(
+                    [
+                        html.Div('Tempo Médio de Resposta Sinistro', className='card-title'),
+                        html.Div(
+                            [
+                                html.Div(id='tempo-medio', className='card-number'),
+                            ],
+                            className='card-content'
+                        ),
+                    ],
+                    className='three columns card'
+                ),
+            ],
+            className='row'
+        ),
+        html.Div(
+            [
+                html.Div(
+                    dcc.Graph(id='dash_status_sinistro'),
+                    className='eight columns'
+                ),
+                html.Div(
+                    [
+                        html.Div(
+                            [
+                                html.Div('Apólices Ativas', className='card-title'),
+                                html.Div(
+                                    [
+                                        html.Div(id='apolices-ativas', className='card-number'),
+                                    ],
+                                    className='card-content'
+                                ),
+                            ],
+                            className='card'
+                        ),
+                        html.Div(
+                            [
+                                html.Div('Total de Sinistros', className='card-title'),
+                                html.Div(
+                                    [
+                                        html.Div(id='total-sinistros', className='card-number'),
+                                    ],
+                                    className='card-content'
+                                ),
+                            ],
+                            className='card'
+                        ),
+                    ],
+                    className='four columns'
+                ),
+            ],
+            className='row'
+        ),
+    ],
+    className='container'
+)
 
 # @app.server.route definindo uma rota Flask no dash
 @app.server.route('/filtros', methods=['POST'])
@@ -132,6 +227,7 @@ def sinistros_por_causa(n):
     cpfs = get_cpf_from_file()
     causas = get_causa_from_file()
     estados = get_estado_from_file()
+    print(estados)
     (table_sinistro, table_emissoes, table_cotacoes, table_sinistros_unica, table_emissoes_unica, table_sinistro_tempo_medio, sinistros_aprovados, sinistros_recusados, sinistros_em_aberto,
     sinistros_fechados, tempo_medio_resposta, ticket_medio, ticket_medio_policy, preco_medio_cotação, apolices_ativas) = tb.retorna_dados()
 
@@ -159,6 +255,7 @@ def sinistros_por_causa(n):
         (pl.col('holder_address_state').is_in(estados)) &
         (pl.col('coverage_name').is_in(causas)))
 
+    print(f"aaaaaaaaaaaaaaa {table_sinistros_unica["state"]}")
     df_filtrado_sinistros = table_sinistros_unica.filter(
         (pl.col('insuredDocument').is_in(cpfs)) &
         (pl.col('state').is_in(estados)) &
@@ -214,35 +311,61 @@ def sinistros_status(n):
 
     return fig
 
-#     if cpfs is None or cpfs == [""]:
-#         cpfs = table_cotacoes["document_number"].unique()
-#         print(cpfs)
-#         print(type(cpfs))
-#
-#     if estados is None or estados == [""]:
-#         estados = table_cotacoes["state"].unique()
-#         print(estados)
-#         print(type(estados))
-#
-#     if causas is None or causas == [""]:
-#         causas = table_emissoes["coverage_name"].unique()
-#         print(causas)
-#         print(type(causas))
-#
-#     print(type(cpfs))
-#     print(cpfs)
-#     df_cotacao_filtrada = table_cotacoes.filter((pl.col('document_number').is_in(cpfs)) &
-#                                                     (pl.col('estado').is_in(estados)))
-#
-#     df_filtrado_emissoes = table_emissoes_unica.filter(
-#         (pl.col('holder_document_number').is_in(cpfs)) &
-#         (pl.col('holder_address_state').is_in(estados)) &
-#         (pl.col('coverage_name').is_in(causas)))
-#
-#     df_filtrado_sinistros = table_emissoes_unica.filter(
-#         (pl.col('insuredDocument').is_in(cpfs)) &
-#         (pl.col('state').is_in(estados)) &
-#         (pl.col('notificationType').is_in(causas)))
+@app.callback(
+    [Output("cotacoes", "children"),
+     Output("contratacoes", "children"),
+     Output("ticket-medio", "children"),
+     Output("ticket-total", "children"),
+     Output("tempo-medio", "children"),
+     Output("apolices-ativas", "children"),
+     Output("total-sinistros", "children")],
+    [Input('interval-component', 'n_intervals')]
+)
+def retorna_valores(n_intervals):
+    cpfs = get_cpf_from_file()
+    causas = get_causa_from_file()
+    estados = get_estado_from_file()
+    (table_sinistro, table_emissoes, table_cotacoes, table_sinistros_unica, table_emissoes_unica, table_sinistro_tempo_medio, sinistros_aprovados, sinistros_recusados, sinistros_em_aberto,
+    sinistros_fechados, tempo_medio_resposta, ticket_medio, ticket_medio_policy, preco_medio_cotação, apolices_ativas) = tb.retorna_dados()
+
+    if cpfs is None or cpfs == [""]:
+        cpfs = table_cotacoes["document_number"].unique()
+        # print(cpfs)
+        # print(type(cpfs))
+
+    if estados is None or estados == [""]:
+        estados = table_cotacoes["state"].unique()
+        # print(estados)
+        # print(type(estados))
+
+    if causas is None or causas == [""]:
+        causas = table_emissoes["coverage_name"].unique()
+        # print(causas)
+        # print(type(causas))
+
+    df_cotacao_filtrada = table_cotacoes.filter((pl.col('document_number').is_in(cpfs)) &
+                                                    (pl.col('state').is_in(estados)))
+
+    df_filtrado_emissoes = table_emissoes_unica.filter(
+        (pl.col('holder_document_number').is_in(cpfs)) &
+        (pl.col('holder_address_state').is_in(estados)) &
+        (pl.col('coverage_name').is_in(causas)))
+
+    df_filtrado_sinistros = table_sinistros_unica.filter(
+        (pl.col('insuredDocument').is_in(cpfs)) &
+        (pl.col('state').is_in(estados)) &
+        (pl.col('notificationType').is_in(causas)))
+
+    cotacoes = df_cotacao_filtrada.shape[0]
+    contratacoes = df_filtrado_emissoes.shape[0]
+    ticket_medio = round(df_filtrado_emissoes["issuance_amount"].mean())
+    ticket_total = round(df_filtrado_emissoes["issuance_amount"].sum())
+    apolices_ativas = df_filtrado_emissoes.shape[0]
+    total_sinistros = df_filtrado_sinistros.shape[0]
+    tempo_medio_resposta = str(tempo_medio_resposta)+"(hrs)"
+    ticket_medio = locale.currency(ticket_medio, grouping=True)
+    ticket_total = locale.currency(ticket_total, grouping=True)
+    return cotacoes,contratacoes,ticket_medio,ticket_total,tempo_medio_resposta,apolices_ativas,total_sinistros
 
 
 # Rodar o aplicativo

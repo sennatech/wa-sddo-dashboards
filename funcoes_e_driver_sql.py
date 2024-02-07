@@ -69,6 +69,7 @@ def plotar_grafico_barras_pl(dataframe, titulo):
             ticktext=[date.strftime('%b %d') for date in eventos_por_tempo_pandas['data']]
         ),
     )
+    print(eventos_por_tempo_pandas)
     fig.update_yaxes(range=[0, max(eventos_por_tempo_pandas['quantidade']) * 1.2])
     fig.update_traces(marker_color='#636EFA')
     return fig
@@ -117,8 +118,8 @@ def create_donut_chart_from_csv(df_sinistro_filtrada):
     fig.update_layout(
         margin=dict(t=25, b=5, l=0, r=0),
         showlegend=False,
-        paper_bgcolor='#001322',
-        font=dict(color='white'),
+        paper_bgcolor='#FFFFFF',
+        font=dict(color='black'),
         title_font=dict(size=18)
     )
     return fig

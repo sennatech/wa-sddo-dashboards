@@ -1,0 +1,78 @@
+/* style.css */
+.container {
+    background-color: #30679A;
+    width: 100%;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    margin-bottom: 20px;
+}
+
+.card {
+    background-color: #FFFFFF;
+    border-radius: 5px;
+    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    margin: 10px;
+    flex-basis: calc(25% - 20px);
+    flex-grow: 1;
+    flex-shrink: 0;
+}
+
+.card-title {
+    color: black;
+    padding: 10px;
+    border-radius: 5px 5px 0 0;
+    font-weight: bold;
+}
+
+.card-content {
+    padding: 10px;
+    width: 100%;
+}
+
+.card-number {
+    font-size: 2.5em;
+    margin: 5px 0;
+}
+
+.card-subtitle {
+    font-size: 1em;
+    color: #666;
+    margin: 0;
+}
+
+.three.columns.card {
+    flex: 0 0 calc(25% - 20px);
+    margin: 10px;
+}
+
+
+.eight.columns {
+    flex: 0 0 calc(66.66% - 20px);
+    margin: 10px;
+}
+
+.four.columns {
+    flex: 0 0 calc(33.33% - 20px);
+    margin: 10px;
+    display: flex;
+    flex-direction: column;
+}
+
+
+.four.columns .card {
+    flex: 1;
+    margin-bottom: 10px;
+}
+
+
