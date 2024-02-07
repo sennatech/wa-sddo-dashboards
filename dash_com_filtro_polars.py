@@ -81,7 +81,7 @@ def dash_coataçao_zipcode(n):
     else:
         df_cotacao_filtrada = table_cotacoes.filter(pl.col('zipcode') == zip_code)
         df_filtrado_emissoes = table_emissoes_unica.filter(pl.col('insured_address_zipcode') == zip_code)
-    print(df_cotacao_filtrada.head(5))
+    # print(df_cotacao_filtrada.head(5))
     fig_cotacao_emissao = fc.plotar_grafico_pizza(df_cotacao_filtrada,df_filtrado_emissoes,"Cotações","Emissões","Cotações X Emissões(Geral)")
 
     return fig_cotacao_emissao

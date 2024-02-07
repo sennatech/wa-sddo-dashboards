@@ -28,7 +28,7 @@ def retorna_dados():
     sinistros_recusados = table_sinistros_unica.filter(pl.col('status_sinistro') == 'RECUSADO')
     sinistros_em_aberto = table_sinistros_unica.filter(pl.col('status_sinistro') == 'PENDENTE')
     sinistros_fechados = table_sinistros_unica.filter(pl.col('status_sinistro') != 'PENDENTE')
-    print(table_sinistro.columns)
+    # print(table_sinistro.columns)
 
     tempo_medio_resposta = round(table_sinistro_tempo_medio["resultado_da_diferenca"].mean())
     ticket_medio = round(table_emissoes_unica["issuance_amount"].mean())
