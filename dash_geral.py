@@ -1,11 +1,8 @@
 from dash import Dash, dcc, html, Input, Output
-import plotly.express as px
 from flask import request
-import funcoes_e_driver_sql as fc
-import tables_e_queries as tb
+from funcoes import funcoes_e_driver_sql as fc
+from tables import tables_e_queries as tb
 import polars as pl
-import pyarrow
-import dash_bootstrap_components as dbc
 import locale
 locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
@@ -135,15 +132,15 @@ def set_filtros():
     estado = data.get('estado')
     causa = data.get('causa')
 
-    with open('document_number.txt', 'w') as file:
+    with open('txts/document_number.txt', 'w') as file:
         for item in cpf:
             file.write(str(item) + '\n')
 
-    with open('causa.txt', 'w') as file:
+    with open('txts/causa.txt', 'w') as file:
         for item in causa:
             file.write(str(item) + '\n')
 
-    with open('estado.txt', 'w') as file:
+    with open('txts/estado.txt', 'w') as file:
         for item in estado:
             file.write(str(item) + '\n')
 
@@ -153,7 +150,7 @@ def set_filtros():
 #gerar arquivos
 def get_cpf_from_file():
     try:
-        with open('document_number.txt', 'r') as file:
+        with open('txts/document_number.txt', 'r') as file:
             cpfs = file.read().strip().split('\n')
             return cpfs
     except FileNotFoundError:
@@ -162,7 +159,7 @@ def get_cpf_from_file():
 #gerar arquivos
 def get_causa_from_file():
     try:
-        with open('causa.txt', 'r') as file:
+        with open('txts/causa.txt', 'r') as file:
             causas = file.read().strip().split('\n')
             return causas
     except FileNotFoundError:
@@ -170,7 +167,7 @@ def get_causa_from_file():
 
 def get_estado_from_file():
     try:
-        with open('estado.txt', 'r') as file:
+        with open('txts/estado.txt', 'r') as file:
             estado = file.read().strip().split('\n')
             return estado
     except FileNotFoundError:

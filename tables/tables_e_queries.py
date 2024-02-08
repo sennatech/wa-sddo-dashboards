@@ -1,6 +1,5 @@
-import  funcoes_e_driver_sql as fc
+from funcoes import funcoes_e_driver_sql as fc
 import polars as pl
-import time
 
 
 #Queries SQL
