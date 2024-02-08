@@ -112,7 +112,7 @@ def create_donut_chart_from_csv(df_sinistro_filtrada):
     colors = [status_colors.get(status, 'gray') for status in status_counts_df["status_sinistro"]]
 
     # Criar um gráfico de pizza (rosca) com um buraco no meio usando Plotly
-    fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.3, marker=dict(colors=colors))])
+    fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.5, marker=dict(colors=colors))])
     fig.update_traces(textinfo='percent+label')
     fig.update_layout(title_text=f'Distribuição dos valores para status_sinistro')
     fig.update_layout(
