@@ -14,10 +14,12 @@ def retorna_dados():
     select_view_tempo_medio = "SELECT * FROM dbo.vw_sinistros_diferenca_eventtime"
     select_view_sinistros_unica = "SELECT * FROM dbo.vw_sinistros_status_atual"
     select_view_emissoes_unica = "SELECT * FROM dbo.vw_emissoes_combinada"
+    select_view_cotacoes_unica = "SELECT * FROM dbo.vw_cotacoes_combinada"
 
     table_sinistro = fc.transforma_query_em_sql(select_sql_sinistros)
     table_emissoes = fc.transforma_query_em_sql(select_sql_emissoes)
     table_cotacoes = fc.transforma_query_em_sql(select_sql_cotacoes)
+    table_cotacoes_unica = fc.transforma_query_em_sql(select_view_cotacoes_unica)
     table_sinistros_unica = (fc.transforma_query_em_sql(select_view_sinistros_unica)).sort("date")
     table_emissoes_unica = fc.transforma_query_em_sql(select_view_emissoes_unica)
     table_sinistro_tempo_medio = fc.transforma_query_em_sql(select_view_tempo_medio)
@@ -36,5 +38,5 @@ def retorna_dados():
     preco_medio_cotação = round(table_cotacoes["amount"].sum()/num_cotacoes,2)
     apolices_ativas = table_emissoes_unica.shape[0]
     return (table_sinistro,table_emissoes,table_cotacoes,table_sinistros_unica,table_emissoes_unica,table_sinistro_tempo_medio,sinistros_aprovados,sinistros_recusados,sinistros_em_aberto,
-            sinistros_fechados,tempo_medio_resposta,ticket_medio,ticket_medio_policy,preco_medio_cotação,apolices_ativas)
+            sinistros_fechados,tempo_medio_resposta,ticket_medio,ticket_medio_policy,preco_medio_cotação,apolices_ativas,table_cotacoes_unica)
 x = retorna_dados()

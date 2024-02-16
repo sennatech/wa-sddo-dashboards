@@ -69,7 +69,6 @@ def plotar_grafico_barras_pl(dataframe, titulo):
             ticktext=[date.strftime('%b %d') for date in eventos_por_tempo_pandas['data']]
         ),
     )
-    print(eventos_por_tempo_pandas)
     fig.update_yaxes(range=[0, max(eventos_por_tempo_pandas['quantidade']) * 1.2])
     fig.update_traces(marker_color='#636EFA')
     return fig

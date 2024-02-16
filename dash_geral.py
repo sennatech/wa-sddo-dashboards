@@ -1,5 +1,5 @@
 from dash import Dash, dcc, html, Input, Output, dash
-from flask import request
+from flask import request, jsonify
 from funcoes import funcoes_e_driver_sql as fc
 from tables import tables_e_queries as tb
 import polars as pl
@@ -94,27 +94,33 @@ def dash_cotaçao_zipcode(n):
     causas = get_causa_from_file()
     estados = get_estado_from_file()
     (table_sinistro, table_emissoes, table_cotacoes, table_sinistros_unica, table_emissoes_unica, table_sinistro_tempo_medio, sinistros_aprovados, sinistros_recusados, sinistros_em_aberto,
-    sinistros_fechados, tempo_medio_resposta, ticket_medio, ticket_medio_policy, preco_medio_cotação, apolices_ativas) = tb.retorna_dados()
+    sinistros_fechados, tempo_medio_resposta, ticket_medio, ticket_medio_policy, preco_medio_cotação, apolices_ativas,table_cotacoes_unica) = tb.retorna_dados()
+
     if cpfs is None or cpfs == [""]:
         cpfs = table_cotacoes["document_number"].unique()
         # print(cpfs)
         # print(type(cpfs))
 
     if estados is None or estados == [""]:
-        estados = table_cotacoes["state"].unique()
+        estados = table_cotacoes["address_state"].unique()
         # print(estados)
         # print(type(estados))
 
     if causas is None or causas == [""]:
         causas = table_emissoes["coverage_name"].unique()
 
-    df_cotacao_filtrada = table_cotacoes.filter((pl.col('document_number').is_in(cpfs)) &
-                                                    (pl.col('state').is_in(estados)))
+    df_cotacao_filtrada = table_emissoes_unica.filter(
+        (pl.col('document_number').is_in(cpfs)) &
+        (pl.col('address_state').is_in(estados)) &
+        (pl.col('coverage').is_in(causas)))
+    df_cotacao_filtrada = df_cotacao_filtrada.unique(subset="quotation_number")
 
-    df_filtrado_emissoes = table_emissoes_unica.filter(
+
+    df_filtrado_emissoes = table_emissoes.filter(
         (pl.col('holder_document_number').is_in(cpfs)) &
         (pl.col('holder_address_state').is_in(estados)) &
         (pl.col('coverage_name').is_in(causas)))
+    df_filtrado_emissoes = df_filtrado_emissoes.unique(subset="policy_number")
 
 
     df_filtrado_sinistros = table_sinistros_unica.filter(
@@ -135,17 +141,17 @@ def sinistros_por_causa(n):
     cpfs = get_cpf_from_file()
     causas = get_causa_from_file()
     estados = get_estado_from_file()
-    print(estados)
-    (table_sinistro, table_emissoes, table_cotacoes, table_sinistros_unica, table_emissoes_unica, table_sinistro_tempo_medio, sinistros_aprovados, sinistros_recusados, sinistros_em_aberto,
-    sinistros_fechados, tempo_medio_resposta, ticket_medio, ticket_medio_policy, preco_medio_cotação, apolices_ativas) = tb.retorna_dados()
-
+    (table_sinistro, table_emissoes, table_cotacoes, table_sinistros_unica, table_emissoes_unica,
+     table_sinistro_tempo_medio, sinistros_aprovados, sinistros_recusados, sinistros_em_aberto,
+     sinistros_fechados, tempo_medio_resposta, ticket_medio, ticket_medio_policy, preco_medio_cotação, apolices_ativas,
+     table_cotacoes_unica) = tb.retorna_dados()
     if cpfs is None or cpfs == [""]:
         cpfs = table_cotacoes["document_number"].unique()
         # print(cpfs)
         # print(type(cpfs))
 
     if estados is None or estados == [""]:
-        estados = table_cotacoes["state"].unique()
+        estados = table_cotacoes["address_state"].unique()
         # print(estados)
         # print(type(estados))
 
@@ -155,15 +161,19 @@ def sinistros_por_causa(n):
         # print(type(causas))
 
 
-    df_cotacao_filtrada = table_cotacoes.filter((pl.col('document_number').is_in(cpfs)) &
-                                                    (pl.col('state').is_in(estados)))
+    df_cotacao_filtrada = table_cotacoes.filter(
+        (pl.col('document_number').is_in(cpfs)) &
+        (pl.col('address_state').is_in(estados)) &
+        (pl.col('coverage').is_in(causas)))
+    df_cotacao_filtrada = df_cotacao_filtrada.unique(subset="quotation_number")
 
-    df_filtrado_emissoes = table_emissoes_unica.filter(
+
+    df_filtrado_emissoes = table_emissoes.filter(
         (pl.col('holder_document_number').is_in(cpfs)) &
         (pl.col('holder_address_state').is_in(estados)) &
         (pl.col('coverage_name').is_in(causas)))
+    df_filtrado_emissoes = df_filtrado_emissoes.unique(subset="policy_number")
 
-    print(f"aaaaaaaaaaaaaaa {table_sinistros_unica["state"]}")
     df_filtrado_sinistros = table_sinistros_unica.filter(
         (pl.col('insuredDocument').is_in(cpfs)) &
         (pl.col('state').is_in(estados)) &
@@ -182,16 +192,17 @@ def sinistros_status(n):
     cpfs = get_cpf_from_file()
     causas = get_causa_from_file()
     estados = get_estado_from_file()
-    (table_sinistro, table_emissoes, table_cotacoes, table_sinistros_unica, table_emissoes_unica, table_sinistro_tempo_medio, sinistros_aprovados, sinistros_recusados, sinistros_em_aberto,
-    sinistros_fechados, tempo_medio_resposta, ticket_medio, ticket_medio_policy, preco_medio_cotação, apolices_ativas) = tb.retorna_dados()
-
+    (table_sinistro, table_emissoes, table_cotacoes, table_sinistros_unica, table_emissoes_unica,
+     table_sinistro_tempo_medio, sinistros_aprovados, sinistros_recusados, sinistros_em_aberto,
+     sinistros_fechados, tempo_medio_resposta, ticket_medio, ticket_medio_policy, preco_medio_cotação, apolices_ativas,
+     table_cotacoes_unica) = tb.retorna_dados()
     if cpfs is None or cpfs == [""]:
         cpfs = table_cotacoes["document_number"].unique()
         # print(cpfs)
         # print(type(cpfs))
 
     if estados is None or estados == [""]:
-        estados = table_cotacoes["state"].unique()
+        estados = table_cotacoes["address_state"].unique()
         # print(estados)
         # print(type(estados))
 
@@ -200,14 +211,18 @@ def sinistros_status(n):
         # print(causas)
         # print(type(causas))
 
+    df_cotacao_filtrada = table_cotacoes.filter(
+        (pl.col('document_number').is_in(cpfs)) &
+        (pl.col('address_state').is_in(estados)) &
+        (pl.col('coverage').is_in(causas)))
+    df_cotacao_filtrada = df_cotacao_filtrada.unique(subset="quotation_number")
 
-    df_cotacao_filtrada = table_cotacoes.filter((pl.col('document_number').is_in(cpfs)) &
-                                                    (pl.col('state').is_in(estados)))
 
-    df_filtrado_emissoes = table_emissoes_unica.filter(
+    df_filtrado_emissoes = table_emissoes.filter(
         (pl.col('holder_document_number').is_in(cpfs)) &
         (pl.col('holder_address_state').is_in(estados)) &
         (pl.col('coverage_name').is_in(causas)))
+    df_filtrado_emissoes = df_filtrado_emissoes.unique(subset="policy_number")
 
     df_filtrado_sinistros = table_sinistros_unica.filter(
         (pl.col('insuredDocument').is_in(cpfs)) &
@@ -234,7 +249,7 @@ def retorna_valores(n_intervals):
     causas = get_causa_from_file()
     estados = get_estado_from_file()
     (table_sinistro, table_emissoes, table_cotacoes, table_sinistros_unica, table_emissoes_unica, table_sinistro_tempo_medio, sinistros_aprovados, sinistros_recusados, sinistros_em_aberto,
-    sinistros_fechados, tempo_medio_resposta, ticket_medio, ticket_medio_policy, preco_medio_cotação, apolices_ativas) = tb.retorna_dados()
+    sinistros_fechados, tempo_medio_resposta, ticket_medio, ticket_medio_policy, preco_medio_cotação, apolices_ativas,table_cotacoes_unica) = tb.retorna_dados()
 
     if cpfs is None or cpfs == [""]:
         cpfs = table_cotacoes["document_number"].unique()
@@ -242,7 +257,7 @@ def retorna_valores(n_intervals):
         # print(type(cpfs))
 
     if estados is None or estados == [""]:
-        estados = table_cotacoes["state"].unique()
+        estados = table_cotacoes["address_state"].unique()
         # print(estados)
         # print(type(estados))
 
@@ -251,13 +266,17 @@ def retorna_valores(n_intervals):
         # print(causas)
         # print(type(causas))
 
-    df_cotacao_filtrada = table_cotacoes.filter((pl.col('document_number').is_in(cpfs)) &
-                                                    (pl.col('state').is_in(estados)))
+    df_cotacao_filtrada = table_cotacoes.filter(
+        (pl.col('document_number').is_in(cpfs)) &
+        (pl.col('address_state').is_in(estados)) &
+        (pl.col('coverage').is_in(causas)))
+    df_cotacao_filtrada = df_cotacao_filtrada.unique(subset="quotation_number")
 
-    df_filtrado_emissoes = table_emissoes_unica.filter(
+    df_filtrado_emissoes = table_emissoes.filter(
         (pl.col('holder_document_number').is_in(cpfs)) &
         (pl.col('holder_address_state').is_in(estados)) &
         (pl.col('coverage_name').is_in(causas)))
+    df_filtrado_emissoes = df_filtrado_emissoes.unique(subset="policy_number")
 
     df_filtrado_sinistros = table_sinistros_unica.filter(
         (pl.col('insuredDocument').is_in(cpfs)) &
@@ -275,6 +294,67 @@ def retorna_valores(n_intervals):
     ticket_total = locale.currency(ticket_total, grouping=True)
     return cotacoes,contratacoes,ticket_medio,ticket_total,tempo_medio_resposta,apolices_ativas,total_sinistros
 
+
+@app.server.route('/retorna_valores', methods=['GET'])
+def retorna_valores_api():
+    cpfs = get_cpf_from_file()
+    causas = get_causa_from_file()
+    estados = get_estado_from_file()
+    (table_sinistro, table_emissoes, table_cotacoes, table_sinistros_unica, table_emissoes_unica,
+     table_sinistro_tempo_medio, sinistros_aprovados, sinistros_recusados, sinistros_em_aberto,
+     sinistros_fechados, tempo_medio_resposta, ticket_medio, ticket_medio_policy, preco_medio_cotação, apolices_ativas,
+     table_cotacoes_unica) = tb.retorna_dados()
+
+    if cpfs is None or cpfs == [""]:
+        cpfs = table_cotacoes["document_number"].unique()
+        # print(cpfs)
+        # print(type(cpfs))
+
+    if estados is None or estados == [""]:
+        estados = table_cotacoes["address_state"].unique()
+        # print(estados)
+        # print(type(estados))
+
+    if causas is None or causas == [""]:
+        causas = table_emissoes["coverage_name"].unique()
+        # print(causas)
+        # print(type(causas))
+
+    df_cotacao_filtrada = table_cotacoes.filter(
+        (pl.col('document_number').is_in(cpfs)) &
+        (pl.col('address_state').is_in(estados)) &
+        (pl.col('coverage').is_in(causas)))
+    df_cotacao_filtrada = df_cotacao_filtrada.unique(subset="quotation_number")
+
+    df_filtrado_emissoes = table_emissoes.filter(
+        (pl.col('holder_document_number').is_in(cpfs)) &
+        (pl.col('holder_address_state').is_in(estados)) &
+        (pl.col('coverage_name').is_in(causas)))
+    df_filtrado_emissoes = df_filtrado_emissoes.unique(subset="policy_number")
+
+    df_filtrado_sinistros = table_sinistros_unica.filter(
+        (pl.col('insuredDocument').is_in(cpfs)) &
+        (pl.col('state').is_in(estados)) &
+        (pl.col('notificationType').is_in(causas)))
+
+    cotacoes = df_cotacao_filtrada.shape[0]
+    contratacoes = df_filtrado_emissoes.shape[0]
+    ticket_medio = round(df_filtrado_emissoes["issuance_amount"].mean())
+    ticket_total = round(df_filtrado_emissoes["issuance_amount"].sum())
+    apolices_ativas = df_filtrado_emissoes.shape[0]
+    total_sinistros = df_filtrado_sinistros.shape[0]
+    tempo_medio_resposta = str(tempo_medio_resposta) + "(hrs)"
+    ticket_medio = locale.currency(ticket_medio, grouping=True)
+    ticket_total = locale.currency(ticket_total, grouping=True)
+    return jsonify({
+        "cotacoes": cotacoes,
+        "contratacoes": contratacoes,
+        "ticket_medio": ticket_medio,
+        "ticket_total": ticket_total,
+        "tempo_medio_resposta": tempo_medio_resposta,
+        "apolices_ativas": apolices_ativas,
+        "total_sinistros": total_sinistros
+    }), 200
 
 # Rodar o aplicativo
 if __name__ == '__main__':
