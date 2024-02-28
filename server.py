@@ -1,10 +1,11 @@
+import ssl
+
 from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, emit
 import tables_e_queries as tb
 import funcoes_e_driver as fc
 import locale
 import polars as pl
-
 # Configurar localização
 locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
@@ -94,51 +95,6 @@ def process_and_save_filters(data):
     return {'success': True, 'document_number': cpf or 'reset', 'causa': causa or 'reset', "estado": estado or "reset"}
 
 
-# cpfs = get_cpf_from_file()
-# causas = get_causa_from_file()
-# estados = get_estado_from_file()
-#
-# (table_sinistro, table_emissoes, table_cotacoes, table_sinistros_unica, table_emissoes_unica,
-#  table_sinistro_tempo_medio, sinistros_aprovados, sinistros_recusados, sinistros_em_aberto,
-#  sinistros_fechados, tempo_medio_resposta, ticket_medio, ticket_medio_policy, preco_medio_cotação, apolices_ativas,
-#  table_cotacoes_unica) = tb.retorna_dados()
-#
-# if cpfs is None or cpfs == [""]:
-#     cpfs = table_cotacoes["document_number"].unique()
-#     # print(cpfs)
-#     # print(type(cpfs))
-#
-# if estados is None or estados == [""]:
-#     estados = table_cotacoes["address_state"].unique()
-#     # print(estados)
-#     # print(type(estados))
-#
-# if causas is None or causas == [""]:
-#     causas = table_emissoes["coverage_name"].unique()
-#     # print(causas)
-#     # print(type(causas))
-#
-# df_cotacao_filtrada = table_cotacoes.filter(
-#     (pl.col('document_number').is_in(cpfs)) &
-#     (pl.col('address_state').is_in(estados)) &
-#     (pl.col('coverage').is_in(causas)))
-# df_cotacao_filtrada = df_cotacao_filtrada.unique(subset="quotation_number")
-#
-# df_filtrado_emissoes = table_emissoes.filter(
-#     (pl.col('holder_document_number').is_in(cpfs)) &
-#     (pl.col('holder_address_state').is_in(estados)) &
-#     (pl.col('coverage_name').is_in(causas)))
-# df_filtrado_emissoes = df_filtrado_emissoes.unique(subset="policy_number")
-#
-# df_filtrado_sinistros = table_sinistros_unica.filter(
-#     (pl.col('insuredDocument').is_in(cpfs)) &
-#     (pl.col('state').is_in(estados)) &
-#     (pl.col('notificationType').is_in(causas)))
-#
-# date, quantidade = fc.retorna_valores_quantidade_por_tempo(df_filtrado_sinistros)
-# date_str_list = date.dt.strftime('%Y-%m-%d').tolist()
-# quantidade = quantidade.to_list()
-# Função que manipula as conexões WebSocket
 def background_task():
     """Função que roda em background para enviar dados periodicamente."""
     while True:
@@ -195,6 +151,8 @@ def background_task():
 
         recusado,pendente,aprovado = fc.retorna_status_sinistro(df_filtrado_sinistros)
 
+        estado_sinistro,sinistro_por_estado = fc.retorna_sinistro_por_estado(df_filtrado_sinistros)
+
         cotacoes = df_cotacao_filtrada.shape[0]
         contratacoes = df_filtrado_emissoes.shape[0]
         ticket_medio = round(df_filtrado_emissoes["issuance_amount"].mean())
@@ -221,6 +179,9 @@ def background_task():
             "tempo_medio_resposta": tempo_medio_resposta,
             "total_sinistros": total_sinistros,
             "apolices_ativas": apolices_ativas,
+            "estados_sinistro": estado_sinistro,
+            "sinistros_por_estado": sinistro_por_estado,
+
 
 
         }
@@ -240,4 +201,4 @@ def on_connect():
 
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=8054, debug=True, allow_unsafe_werkzeug=True)

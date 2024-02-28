@@ -197,3 +197,13 @@ def retorna_status_sinistro(df_sinistro_filtrada):
     print(f"Recusado: {recusado_val}, Pendente: {pendente_val}, Aprovado: {aprovado_val}")
 
     return recusado_val,pendente_val,aprovado_val
+
+def retorna_sinistro_por_estado(df_sinistro_filtrado):
+    print(df_sinistro_filtrado.columns)
+    agrupado_por_estado = df_sinistro_filtrado.groupby("state").agg(pl.count().alias('count'))
+    agrupado_por_estado_pandas = agrupado_por_estado.to_pandas()
+    state_list = agrupado_por_estado_pandas['state'].tolist()
+    count_list = agrupado_por_estado_pandas['count'].tolist()
+    print(f"state {state_list}")
+    print(f"count {count_list}")
+    return state_list,count_list
