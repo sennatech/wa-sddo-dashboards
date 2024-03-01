@@ -201,4 +201,5 @@ def on_connect():
 
 
 if __name__ == '__main__':
+    print("testando docker")
     socketio.run(app, host='0.0.0.0', port=8054, debug=True, allow_unsafe_werkzeug=True)
