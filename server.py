@@ -1,5 +1,4 @@
 import ssl
-
 from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, emit
 import tables_e_queries as tb
@@ -141,9 +140,11 @@ def background_task():
             (pl.col('state').is_in(estados)) &
             (pl.col('notificationType').is_in(causas)))
 
-        date, quantidade = fc.retorna_valores_quantidade_por_tempo(df_filtrado_sinistros)
-        date_str_list = date.dt.strftime('%Y-%m-%d').tolist()
-        quantidade = quantidade.to_list()
+        date_sinistro, quantidade_sinistro,percentua_sinistro = fc.retorna_valores_quantidade_por_tempo_sinistro(df_filtrado_sinistros)
+        data_cotacao,quantidade_cotacao,percentua_cotacao = fc.retorna_valores_quantidade_por_tempo_cotacao(df_cotacao_filtrada)
+        date_sinistro = date_sinistro.dt.strftime('%Y-%m-%d').tolist()
+        quantidade_sinistro = quantidade_sinistro.to_list()
+        date_emissao,quantidade_emissao,percentua_emissao = fc.retorna_valores_quantidade_por_tempo_emissao(df_filtrado_emissoes)
 
         status_sinistro_M,status_sinistro_F = fc.retorna_valores_genero(df_filtrado_sinistros)
 
@@ -163,10 +164,9 @@ def background_task():
         ticket_medio = locale.currency(ticket_medio, grouping=True)
         ticket_total = locale.currency(ticket_total, grouping=True)
 
+        print(f"quantidade list {data_cotacao}")
 
         arrays = {
-            "date": date_str_list,
-            "quantidade": quantidade,
             "sinistro_M": status_sinistro_M,
             "sinistro_F": status_sinistro_F,
             "cotacoes": num_cotacoes,
@@ -181,11 +181,19 @@ def background_task():
             "apolices_ativas": apolices_ativas,
             "estados_sinistro": estado_sinistro,
             "sinistros_por_estado": sinistro_por_estado,
+            "data_sinisto": date_sinistro,
+            "quantidade_sinistro": quantidade_sinistro,
+            "percentual_sinisto":percentua_sinistro,
+            "data_cotacao":data_cotacao,
+            "quantidade_cotacao":quantidade_cotacao,
+            "percentual_cotacao": percentua_cotacao,
+            "data_emissao":date_emissao,
+            "quantidade_emissao":quantidade_emissao,
+            "percentual_emissao":percentua_emissao
 
 
 
         }
-
         # Usar o emit dentro do contexto do SocketIO para enviar para todos os clientes conectados
         socketio.emit('response_data', arrays)
 
@@ -201,4 +209,6 @@ def on_connect():
 
 
 if __name__ == '__main__':
+    print("testando docker")
+    print("...")
     socketio.run(app, host='0.0.0.0', port=8054, debug=True, allow_unsafe_werkzeug=True)

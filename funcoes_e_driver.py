@@ -1,10 +1,8 @@
 import textwrap
 import pyodbc
-import math
 import polars as pl
 from credentials import username, password
-import plotly.express as px
-import plotly.graph_objects as go
+
 
 
 #Conectando com o banco de dados
@@ -20,7 +18,7 @@ connection_string = textwrap.dedent(f'''
     Encrypt=yes;
     TrustServerCertificate=no;
     Connection Timeout=30;
-    "MultipleActiveResultSets=True"
+    MultipleActiveResultSets=True;
 ''')
 
 
@@ -38,127 +36,17 @@ def transforma_query_em_sql(sql_query):
     cnxn.close()
     return df
 
-
-
-def plotar_grafico_barras_pl(dataframe, titulo):
+def retorna_valores_quantidade_por_tempo_sinistro(dataframe):
     eventos_por_tempo = dataframe.groupby('date').count().rename({"count": "quantidade"})
     eventos_por_tempo_pandas = eventos_por_tempo.to_pandas()
-    fig = go.Figure()
-    print(eventos_por_tempo_pandas)
-    # Add bars with the specific colors you've requested
-    fig.add_trace(go.Bar(
-        x=eventos_por_tempo_pandas['date'],
-        y=eventos_por_tempo_pandas['quantidade'],
-        marker=dict(color="black")
-    ))
+    eventos_por_tempo_pandas['variação_percentual'] = eventos_por_tempo_pandas['quantidade'].pct_change().mul(100).round(0)
+    eventos_por_tempo_pandas['variação_percentual'] = eventos_por_tempo_pandas['quantidade'].pct_change().mul(100).round(0).fillna(0)
 
-    # Update the layout with the requested colors and settings
-    fig.update_layout(
-        margin=dict(t=30, b=30, l=30, r=30),
-        paper_bgcolor='#333962',
-        plot_bgcolor='#333962',
-        font=dict(color='white'),
-        title_font=dict(size=18),
-        xaxis=dict(
-            tickmode='array',
-            tickvals=eventos_por_tempo_pandas['date'],
-            ticktext=[date.strftime('%b %d') for date in eventos_por_tempo_pandas['date']],
-            showline=True,
-            linecolor='white',
-            linewidth=2,
-            ticks='outside',
-            tickfont=dict(
-                family='Arial',
-                size=12,
-                color='white'
-            )
-        ),
-        yaxis=dict(
-            showgrid=True,
-            gridcolor='#485082'
-        )
-    )
-
-    # Set y-axis range to be 20% higher than the max 'quantidade' value
-    max_quantity = eventos_por_tempo_pandas['quantidade'].max()
-    fig.update_yaxes(range=[0, max_quantity * 1.2])
-
-    return fig
-
-def plotar_grafico_pizza(df1, df2,label1,label2, titulo):
-
-    num_cotacoes = df1.shape[0]
-    num_emissoes = df2.shape[0]
-    labels = [label1, label2]
-
-    fig = px.pie(names=labels, values=[num_cotacoes, num_emissoes])
-    fig.update_layout(
-        margin=dict(t=30, b=10, l=0, r=0),
-        showlegend=False,
-        paper_bgcolor='white',
-        font=dict(color='black'),
-        title_font=dict(size=18)
-    )
-    fig.update_traces(marker=dict(colors=['#30679A', '#31999A'], line=dict(color='rgb(17,17,17)', width=2)))
-    return fig
-
-
-def create_donut_chart_from_csv(df_sinistro_filtrada):
-
-
-    # Calcular a contagem de cada valor na coluna especificada
-    status_counts = df_sinistro_filtrada.groupby("status_sinistro").agg(pl.count().alias('count'))
-    # Converter Polars DataFrame para Pandas DataFrame para usar com Plotly
-    status_counts_df = status_counts.to_pandas()
-    # Certifique-se de que os nomes das colunas estão corretos aqui
-    labels = status_counts_df["status_sinistro"]
-    values = status_counts_df['count']  # Usando 'count' como definido pelo alias na agregação
-    status_colors = {
-        'RECUSADO': '#690000',
-        'APROVADO': '#70BF7B',
-        'PENDENTE': '#C2B70C'
-    }
-    colors = [status_colors.get(status, 'gray') for status in status_counts_df["status_sinistro"]]
-
-    # Criar um gráfico de pizza (rosca) com um buraco no meio usando Plotly
-    fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=0.5, marker=dict(colors=colors))])
-    fig.update_traces(textinfo='percent+label')
-    fig.update_layout(
-        margin=dict(t=25, b=5, l=0, r=0),
-        showlegend=False,
-        paper_bgcolor='#FFFFFF',
-        font=dict(color='black'),
-        title_font=dict(size=18)
-    )
-    return fig
-def cria_grafico_rosquinha_genero(df_filtrado_sinistros,label1,label2):
-    # Contagem de sinistros por gênero usando Polars
-
-    df_sinistros_M = df_filtrado_sinistros.filter(pl.col('genderNotifier') == 'M')
-    df_sinistros_F = df_filtrado_sinistros.filter(pl.col('genderNotifier') == 'F')
-    num_sinistros_M = df_sinistros_M.shape[0]
-    num_sinistros_F = df_sinistros_F.shape[0]
-    # Convertendo para listas Python para uso no Plotly
-    labels = [label1,label2]
-    values = [num_sinistros_M,num_sinistros_F]
-    colors = ['#31999A', '#30679A']
-
-    # Criando o gráfico de rosquinha
-    fig = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.5,marker=dict(colors=colors))])
-
-    fig.update_layout(
-        margin=dict(t=25, b=5, l=0, r=0),
-        showlegend=False,
-        paper_bgcolor='#FFFFFF',
-        font=dict(color='black'),
-        title_font=dict(size=18)
-    )
-
-    return fig
-def retorna_valores_quantidade_por_tempo(dataframe):
-    eventos_por_tempo = dataframe.groupby('date').count().rename({"count": "quantidade"})
-    eventos_por_tempo_pandas = eventos_por_tempo.to_pandas()
-    return  eventos_por_tempo_pandas["date"],eventos_por_tempo_pandas["quantidade"]
+    variacao_percentual_list = eventos_por_tempo_pandas['variação_percentual'].tolist()
+    if pd.isna(variacao_percentual_list[0]):
+        variacao_percentual_list[0] = 0
+    # print(variacao_percentual_list)
+    return  eventos_por_tempo_pandas["date"],eventos_por_tempo_pandas["quantidade"],variacao_percentual_list
 
 def retorna_valores_genero(df_filtrado_sinistros):
     # Contagem de sinistros por gênero usando Polars
@@ -207,3 +95,41 @@ def retorna_sinistro_por_estado(df_sinistro_filtrado):
     count_list = agrupado_por_estado_pandas['count'].tolist()
 
     return state_list,count_list
+
+
+import pandas as pd
+
+
+def retorna_valores_quantidade_por_tempo_cotacao(dataframe_cotacao):
+    eventos_por_tempo = dataframe_cotacao.groupby('eventtime').count().rename({"count": "quantidade"})
+    eventos_por_tempo_pandas = eventos_por_tempo.to_pandas()
+    eventos_por_tempo_pandas['eventtime'] = pd.to_datetime(eventos_por_tempo_pandas['eventtime'])
+    eventos_por_tempo_pandas['date'] = eventos_por_tempo_pandas['eventtime'].dt.date
+    grouped_df = eventos_por_tempo_pandas.groupby('date')['quantidade'].sum().reset_index()
+    grouped_df['variação_percentual'] = grouped_df['quantidade'].pct_change().mul(100).round(0)
+    grouped_df['variação_percentual'] = grouped_df['quantidade'].pct_change().mul(100).round(0).fillna(0)
+
+    variacao_percentual_list = grouped_df['variação_percentual'].tolist()
+    date_list = grouped_df['date'].astype(str).tolist()
+    if pd.isna(variacao_percentual_list[0]):
+        variacao_percentual_list[0] = 0
+    quantidade_list = grouped_df['quantidade'].tolist()
+
+    return date_list,quantidade_list,variacao_percentual_list
+
+def retorna_valores_quantidade_por_tempo_emissao(dataframe_emissao):
+    eventos_por_tempo = dataframe_emissao.groupby('eventtime').count().rename({"count": "quantidade"})
+    eventos_por_tempo_pandas = eventos_por_tempo.to_pandas()
+    eventos_por_tempo_pandas['eventtime'] = pd.to_datetime(eventos_por_tempo_pandas['eventtime'])
+    eventos_por_tempo_pandas['date'] = eventos_por_tempo_pandas['eventtime'].dt.date
+    grouped_df = eventos_por_tempo_pandas.groupby('date')['quantidade'].sum().reset_index()
+    grouped_df['variação_percentual'] = grouped_df['quantidade'].pct_change().mul(100).round(0)
+    grouped_df['variação_percentual'] = grouped_df['quantidade'].pct_change().mul(100).round(0).fillna(0)
+    variacao_percentual_list = grouped_df['variação_percentual'].tolist()
+    print(variacao_percentual_list)
+    date_list = grouped_df['date'].astype(str).tolist()
+    if pd.isna(variacao_percentual_list[0]):
+        variacao_percentual_list[0] = 0
+    quantidade_list = grouped_df['quantidade'].tolist()
+
+    return date_list,quantidade_list,variacao_percentual_list
