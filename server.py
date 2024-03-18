@@ -128,16 +128,16 @@ def background_task():
             (pl.col('document_number').is_in(cpfs)) &
             (pl.col('address_state').is_in(estados)) &
             (pl.col('coverage').is_in(causas)))
-        df_cotacao_filtrada = df_cotacao_filtrada.unique(subset="quotation_number")
+        df_cotacao_filtrada = df_cotacao_filtrada.unique(subset="id")
 
         df_filtrado_emissoes = table_emissoes.filter(
-            (pl.col('holder_document_number').is_in(cpfs)) &
+            (pl.col('document_number').is_in(cpfs)) &
             (pl.col('holder_address_state').is_in(estados)) &
             (pl.col('coverage_name').is_in(causas)))
-        df_filtrado_emissoes = df_filtrado_emissoes.unique(subset="policy_number")
+        df_filtrado_emissoes = df_filtrado_emissoes.unique(subset="id")
 
         df_filtrado_sinistros = table_sinistros_unica.filter(
-            (pl.col('insuredDocument').is_in(cpfs)) &
+            (pl.col('document_number').is_in(cpfs)) &
             (pl.col('state').is_in(estados)) &
             (pl.col('notificationType').is_in(causas)))
 
@@ -155,8 +155,8 @@ def background_task():
 
         cotacoes = df_cotacao_filtrada.shape[0]
         contratacoes = df_filtrado_emissoes.shape[0]
-        ticket_medio = round(df_filtrado_emissoes["issuance_amount"].mean())
-        ticket_total = round(df_filtrado_emissoes["issuance_amount"].sum())
+        ticket_medio = round(df_filtrado_emissoes["amount"].mean())
+        ticket_total = round(df_filtrado_emissoes["amount"].sum())
         apolices_ativas = df_filtrado_emissoes.shape[0]
         total_sinistros = df_filtrado_sinistros.shape[0]
         tempo_medio_resposta = tempo_medio_resposta
