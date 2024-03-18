@@ -43,8 +43,6 @@ def retorna_valores_quantidade_por_tempo_sinistro(dataframe):
     eventos_por_tempo_pandas['variação_percentual'] = eventos_por_tempo_pandas['quantidade'].pct_change().mul(100).round(0).fillna(0)
 
     variacao_percentual_list = eventos_por_tempo_pandas['variação_percentual'].tolist()
-    if pd.isna(variacao_percentual_list[0]):
-        variacao_percentual_list[0] = 0
     # print(variacao_percentual_list)
     return  eventos_por_tempo_pandas["date"],eventos_por_tempo_pandas["quantidade"],variacao_percentual_list
 
@@ -111,8 +109,6 @@ def retorna_valores_quantidade_por_tempo_cotacao(dataframe_cotacao):
 
     variacao_percentual_list = grouped_df['variação_percentual'].tolist()
     date_list = grouped_df['date'].astype(str).tolist()
-    if pd.isna(variacao_percentual_list[0]):
-        variacao_percentual_list[0] = 0
     quantidade_list = grouped_df['quantidade'].tolist()
 
     return date_list,quantidade_list,variacao_percentual_list
@@ -128,8 +124,7 @@ def retorna_valores_quantidade_por_tempo_emissao(dataframe_emissao):
     variacao_percentual_list = grouped_df['variação_percentual'].tolist()
     print(variacao_percentual_list)
     date_list = grouped_df['date'].astype(str).tolist()
-    if pd.isna(variacao_percentual_list[0]):
-        variacao_percentual_list[0] = 0
+
     quantidade_list = grouped_df['quantidade'].tolist()
 
     return date_list,quantidade_list,variacao_percentual_list
