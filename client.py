@@ -17,7 +17,7 @@ async def response_data(data):
 async def main():
     # Altere a URL para usar wss:// e assegure-se de que a porta está correta para WSS
     # Você também precisa garantir que o servidor suporta WSS nessa porta.
-    await sio.connect('ws://20.206.162.188:8054')  # Substitua com a URL correta para WSS
+    await sio.connect('ws://127.0.0.1:8054')  # Substitua com a URL correta para WSS
     await sio.wait()
 
 if __name__ == '__main__':
