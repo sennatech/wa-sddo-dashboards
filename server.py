@@ -139,6 +139,7 @@ def background_task():
             (pl.col('document_number').is_in(cpfs)) &
             (pl.col('state').is_in(estados)) &
             (pl.col('notificationType').is_in(causas)))
+        print(df_filtrado_sinistros.columns)
 
         date_sinistro, quantidade_sinistro,percentua_sinistro = fc.retorna_valores_quantidade_por_tempo_sinistro(df_filtrado_sinistros)
         data_cotacao,quantidade_cotacao,percentua_cotacao = fc.retorna_valores_quantidade_por_tempo_cotacao(df_cotacao_filtrada)
@@ -146,11 +147,17 @@ def background_task():
         quantidade_sinistro = quantidade_sinistro.to_list()
         date_emissao,quantidade_emissao,percentua_emissao = fc.retorna_valores_quantidade_por_tempo_emissao(df_filtrado_emissoes)
 
+        apolices_em_desuso = fc.calcular_porcentagem_ids_unicos_pl(df_filtrado_sinistros,df_filtrado_emissoes,coluna_id="id")
+
+        tipos_notificacao_e_porcentagens = fc.calcular_porcentagem_notificationType_e_retornar_lista(df_filtrado_sinistros)
+
         status_sinistro_M,status_sinistro_F = fc.retorna_valores_genero(df_filtrado_sinistros)
 
         num_cotacoes, num_emissoes = fc.retorna_valores_cotacao_emissao(df_cotacao_filtrada,df_filtrado_emissoes)
 
-        recusado,pendente,aprovado = fc.retorna_status_sinistro(df_filtrado_sinistros)
+        (recusado,pendente,aprovado,porcentagem_recusado,porcentagem_pendente,porcentagem_aprovado,
+         porcentagem_sinistro_aberto,porcentagem_sinistro_fechado,
+         porcentagem_sinistros_pagos,porcentagem_sinistros_recusados) = fc.retorna_status_sinistro(df_filtrado_sinistros)
 
         estado_sinistro,sinistro_por_estado = fc.retorna_sinistro_por_estado(df_filtrado_sinistros)
 
@@ -189,7 +196,16 @@ def background_task():
             "percentual_cotacao": percentua_cotacao,
             "data_emissao":date_emissao,
             "quantidade_emissao":quantidade_emissao,
-            "percentual_emissao":percentua_emissao
+            "percentual_emissao":percentua_emissao,
+            "porcentagem_apolices_em_desuso":apolices_em_desuso,
+            "porcentagem_recusado": porcentagem_recusado,
+            "porcentagem_pendente": porcentagem_pendente,
+            "porcentagem_aprovado": porcentagem_aprovado,
+            "porcentagem_notificacoes_pendente": tipos_notificacao_e_porcentagens,
+            "porcentagem_sinistros_aberto": porcentagem_sinistro_aberto,
+            "porcentagem_sinistros_fechado": porcentagem_sinistro_fechado,
+            "porcentagem_sinistros_pagos": porcentagem_sinistros_pagos,
+            "porcentagem_sinistros_recusados": porcentagem_sinistros_recusados
 
 
 
@@ -209,6 +225,5 @@ def on_connect():
 
 
 if __name__ == '__main__':
-    print("testando docker")
-    print("...")
+
     socketio.run(app, host='0.0.0.0', port=8054, debug=True, allow_unsafe_werkzeug=True)
