@@ -17,7 +17,8 @@ async def response_data(data):
 async def main():
     # Altere a URL para usar wss:// e assegure-se de que a porta está correta para WSS
     # Você também precisa garantir que o servidor suporta WSS nessa porta.
-    await sio.connect('ws://192.168.0.4:8054')  # Substitua com a URL correta para WSS
+    await sio.connect('wss://wa-poc-dockerdeploy.azurewebsites.net')  # Substitua com a URL correta para WSS
     await sio.wait()
+
 if __name__ == '__main__':
     asyncio.run(main())

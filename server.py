@@ -6,7 +6,6 @@ import funcoes_e_driver as fc
 import locale
 import polars as pl
 # Configurar localização
-locale.setlocale(locale.LC_ALL, 'pt_BR.UTF-8')
 
 # Instanciar o aplicativo Flask
 app = Flask(__name__)
@@ -178,8 +177,7 @@ def background_task():
         apolices_ativas = df_filtrado_emissoes.shape[0]
         total_sinistros = df_filtrado_sinistros.shape[0]
         tempo_medio_resposta = tempo_medio_resposta
-        ticket_medio = locale.currency(ticket_medio, grouping=True)
-        ticket_total = locale.currency(ticket_total, grouping=True)
+
 
         print(f"quantidade list {data_cotacao}")
 
