@@ -41,6 +41,16 @@ def set_filtros():
     return jsonify({'success': True, 'document_number': cpf or 'reset',
                     'causa': causa or 'reset', "estado": estado or "reset"})
 
+@app.route('/filtro_sinistros', methods=['GET'])
+def get_clients():
+    table_sinistros = fc.transforma_query_em_sql("SELECT * FROM sddo.sinistros")
+    cpfs = (table_sinistros["document_number"].unique()).to_list()
+    estados = (table_sinistros["state"].unique()).to_list()
+    causas = (table_sinistros["notificationType"].unique()).to_list()
+
+    return jsonify({"Cpfs": cpfs,"Estados": estados,"Causas": causas})
+
+
 # Função para ler CPFs de um arquivo
 def get_cpf_from_file():
     try:
