@@ -3,7 +3,6 @@ from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, emit
 import tables_e_queries as tb
 import funcoes_e_driver as fc
-import locale
 import polars as pl
 # Configurar localização
 
