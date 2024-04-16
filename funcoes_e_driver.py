@@ -2,6 +2,7 @@ import textwrap
 import pyodbc
 import polars as pl
 from credentials import username, password
+import pandas as pd
 
 
 
@@ -128,9 +129,6 @@ def retorna_sinistro_por_estado(df_sinistro_filtrado):
     return state_list,count_list
 
 
-import pandas as pd
-
-
 def retorna_valores_quantidade_por_tempo_cotacao(dataframe_cotacao):
     eventos_por_tempo = dataframe_cotacao.groupby('eventtime').count().rename({"count": "quantidade"})
     eventos_por_tempo_pandas = eventos_por_tempo.to_pandas()
@@ -165,24 +163,24 @@ def retorna_valores_quantidade_por_tempo_emissao(dataframe_emissao):
 
 def calcular_porcentagem_ids_unicos_pl(df1, df2, coluna_id='id'):
 
+    coluna_id_sinistros = "policy_number"
     # Encontra os IDs únicos em cada DataFrame
-    ids_unicos_df1 = df1.select(coluna_id).unique()
+    ids_unicos_df1 = df1.select(coluna_id_sinistros).unique()
     ids_unicos_df2 = df2.select(coluna_id).unique()
 
     # Calcula a diferença de conjuntos para encontrar IDs em df1 que não estão em df2
     len_df1 = len(ids_unicos_df1)
     len_df2 = len(ids_unicos_df2)
-    porcentagem = round(100-((len_df1/len_df2)*100),0)
+    diferenca = len_df2 - len_df1
+
+    porcentagem = round(((diferenca/len_df2)*100),0)
     print(porcentagem)
+
     # print(ids_diferentes)
     # Calcula a porcentagem de IDs únicos em df1 em relação ao total de IDs únicos em df2
 
     return porcentagem
 
-
-import polars as pl
-
-import polars as pl
 
 def calcular_porcentagem_notificationType_e_retornar_lista(df, coluna_notificationType='notificationType'):
 
