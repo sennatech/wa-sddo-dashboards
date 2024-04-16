@@ -221,7 +221,6 @@ def background_task():
         socketio.emit('response_data', arrays)
 
         # Aguardar 3 segundos antes de enviar o próximo conjunto de dados
-        socketio.sleep(3)
 
 
 @socketio.on('connect')
