@@ -147,6 +147,7 @@ def background_task():
             (pl.col('document_number').is_in(cpfs)) &
             (pl.col('state').is_in(estados)) &
             (pl.col('notificationType').is_in(causas)))
+        df_filtrado_sinistros = df_filtrado_sinistros.unique(subset="id")
         print(df_filtrado_sinistros.columns)
 
         date_sinistro, quantidade_sinistro,percentua_sinistro = fc.retorna_valores_quantidade_por_tempo_sinistro(df_filtrado_sinistros)
@@ -219,6 +220,7 @@ def background_task():
         }
         # Usar o emit dentro do contexto do SocketIO para enviar para todos os clientes conectados
         socketio.emit('response_data', arrays)
+        socketio.sleep(1)
 
         # Aguardar 3 segundos antes de enviar o próximo conjunto de dados
 
