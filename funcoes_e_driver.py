@@ -4,9 +4,7 @@ import polars as pl
 from credentials import username, password
 import pandas as pd
 
-
-
-#Conectando com o banco de dados
+# Conectando com o banco de dados
 driver = '{ODBC Driver 18 for SQL Server}'
 server = 'dbs-sddo-dev.database.windows.net,1433'
 database = 'db-sddo-dev'
@@ -23,29 +21,46 @@ connection_string = textwrap.dedent(f'''
 ''')
 
 
+def get_connection():
+    driver = '{ODBC Driver 18 for SQL Server}'
+    server = 'dbs-sddo-dev.database.windows.net,1433'
+    database = 'db-sddo-dev'
+    connection_string = f'''
+        Driver={driver};
+        Server={server};
+        Database={database};
+        Uid={username};
+        Pwd={password};
+        Encrypt=yes;
+        TrustServerCertificate=no;
+        Connection Timeout=30;
+        MultipleActiveResultSets=True;
+    '''
+    return pyodbc.connect(connection_string.strip())
+
+
 def transforma_query_em_sql(sql_query):
-    cnxn: pyodbc.Connection = pyodbc.connect(connection_string)
-    crsr: pyodbc.Cursor = cnxn.cursor()
-    # crsr.execute(sql_query)
-    # colunas = [i[0] for i in crsr.description]
-    # dados = crsr.fetchall()
-    # data = [tuple(rows) for rows in dados]
-    # df = pl.DataFrame(data=data)
-    # df.columns = colunas
-    df = pl.read_database(query=sql_query, connection=crsr)
-    crsr.close()
-    cnxn.close()
+    with get_connection() as cnxn:
+        # Execute the SQL query and fetch the result
+        crsr = cnxn.cursor()
+        df = pl.read_database(query=sql_query, connection=crsr)
+        crsr.close()
+
     return df
+
 
 def retorna_valores_quantidade_por_tempo_sinistro(dataframe):
     eventos_por_tempo = dataframe.group_by('date').count().rename({"count": "quantidade"})
     eventos_por_tempo_pandas = eventos_por_tempo.to_pandas()
-    eventos_por_tempo_pandas['variação_percentual'] = eventos_por_tempo_pandas['quantidade'].pct_change().mul(100).round(0)
-    eventos_por_tempo_pandas['variação_percentual'] = eventos_por_tempo_pandas['quantidade'].pct_change().mul(100).round(0).fillna(0)
+    eventos_por_tempo_pandas['variação_percentual'] = eventos_por_tempo_pandas['quantidade'].pct_change().mul(
+        100).round(0)
+    eventos_por_tempo_pandas['variação_percentual'] = eventos_por_tempo_pandas['quantidade'].pct_change().mul(
+        100).round(0).fillna(0)
 
     variacao_percentual_list = eventos_por_tempo_pandas['variação_percentual'].tolist()
     # print(variacao_percentual_list)
-    return  eventos_por_tempo_pandas["date"],eventos_por_tempo_pandas["quantidade"],variacao_percentual_list
+    return eventos_por_tempo_pandas["date"], eventos_por_tempo_pandas["quantidade"], variacao_percentual_list
+
 
 def retorna_valores_genero(df_filtrado_sinistros):
     # Contagem de sinistros por gênero usando Polars
@@ -57,15 +72,15 @@ def retorna_valores_genero(df_filtrado_sinistros):
 
     return num_sinistros_M, num_sinistros_F
 
-def retorna_valores_cotacao_emissao(df_cotacoes, df_emissoes):
 
+def retorna_valores_cotacao_emissao(df_cotacoes, df_emissoes):
     num_cotacoes = df_cotacoes.shape[0]
     num_emissoes = df_emissoes.shape[0]
 
     return num_cotacoes, num_emissoes
+
+
 def retorna_status_sinistro(df_sinistro_filtrada):
-
-
     # Calcular a contagem de cada valor na coluna especificada
     status_counts = df_sinistro_filtrada.group_by("status_sinistro").agg(pl.count().alias('count'))
     # Converter Polars DataFrame para Pandas DataFrame para usar com Plotly
@@ -83,50 +98,50 @@ def retorna_status_sinistro(df_sinistro_filtrada):
     aprovado_val = aprovado_row['count'][0] if not aprovado_row.is_empty() else 0
 
     try:
-        porcentagem_recusado = round((recusado_val/total_sinistros)*100,0)
+        porcentagem_recusado = round((recusado_val / total_sinistros) * 100, 0)
     except:
         porcentagem_recusado = 0
 
     try:
-        porcentagem_pendente = round((pendente_val/total_sinistros)*100,0)
+        porcentagem_pendente = round((pendente_val / total_sinistros) * 100, 0)
     except:
         porcentagem_pendente = 0
     try:
-        porcentagem_aprovado = round((aprovado_val/total_sinistros)*100,0)
+        porcentagem_aprovado = round((aprovado_val / total_sinistros) * 100, 0)
     except:
         porcentagem_aprovado = 0
 
     try:
-        sinistros_fechados = recusado_val+aprovado_val
+        sinistros_fechados = recusado_val + aprovado_val
         sinistro_em_aberto = pendente_val
         total_sinistros = sinistro_em_aberto + sinistros_fechados
-        portentagem_sinistros_aberto = (round((sinistro_em_aberto / total_sinistros)*100,0))
-        portentagem_sinistros_fechado = (round((sinistros_fechados / total_sinistros)*100,0))
+        portentagem_sinistros_aberto = (round((sinistro_em_aberto / total_sinistros) * 100, 0))
+        portentagem_sinistros_fechado = (round((sinistros_fechados / total_sinistros) * 100, 0))
     except:
         portentagem_sinistros_aberto = 0
         portentagem_sinistros_fechado = 0
 
     try:
         sinistros_fechados_total = recusado_val + aprovado_val
-        porcentagem_sinistros_pagos = (round((aprovado_val / sinistros_fechados_total)*100,0))
-        porcentagem_sinistros_recusados = (round((recusado_val / sinistros_fechados_total)*100,0))
+        porcentagem_sinistros_pagos = (round((aprovado_val / sinistros_fechados_total) * 100, 0))
+        porcentagem_sinistros_recusados = (round((recusado_val / sinistros_fechados_total) * 100, 0))
     except:
         porcentagem_sinistros_pagos = 0
         porcentagem_sinistros_recusados = 0
 
-    return (recusado_val,pendente_val,aprovado_val,porcentagem_recusado,
-            porcentagem_pendente,porcentagem_aprovado,portentagem_sinistros_aberto,
-            portentagem_sinistros_fechado,porcentagem_sinistros_pagos,porcentagem_sinistros_recusados)
+    return (recusado_val, pendente_val, aprovado_val, porcentagem_recusado,
+            porcentagem_pendente, porcentagem_aprovado, portentagem_sinistros_aberto,
+            portentagem_sinistros_fechado, porcentagem_sinistros_pagos, porcentagem_sinistros_recusados)
+
 
 def retorna_sinistro_por_estado(df_sinistro_filtrado):
-
     agrupado_por_estado = df_sinistro_filtrado.group_by("state").agg(pl.count().alias('count'))
     agrupado_por_estado_pandas = agrupado_por_estado.to_pandas()
     agrupado_por_estado_pandas.sort_values(by='count', inplace=True)
     state_list = agrupado_por_estado_pandas['state'].tolist()
     count_list = agrupado_por_estado_pandas['count'].tolist()
 
-    return state_list,count_list
+    return state_list, count_list
 
 
 def retorna_valores_quantidade_por_tempo_cotacao(dataframe_cotacao):
@@ -142,7 +157,8 @@ def retorna_valores_quantidade_por_tempo_cotacao(dataframe_cotacao):
     date_list = grouped_df['date'].astype(str).tolist()
     quantidade_list = grouped_df['quantidade'].tolist()
 
-    return date_list,quantidade_list,variacao_percentual_list
+    return date_list, quantidade_list, variacao_percentual_list
+
 
 def retorna_valores_quantidade_por_tempo_emissao(dataframe_emissao):
     eventos_por_tempo = dataframe_emissao.group_by('eventtime').count().rename({"count": "quantidade"})
@@ -158,11 +174,10 @@ def retorna_valores_quantidade_por_tempo_emissao(dataframe_emissao):
 
     quantidade_list = grouped_df['quantidade'].tolist()
 
-    return date_list,quantidade_list,variacao_percentual_list
+    return date_list, quantidade_list, variacao_percentual_list
 
 
 def calcular_porcentagem_ids_unicos_pl(df1, df2, coluna_id='id'):
-
     coluna_id_sinistros = "policy_number"
     # Encontra os IDs únicos em cada DataFrame
     ids_unicos_df1 = df1.select(coluna_id_sinistros).unique()
@@ -173,7 +188,7 @@ def calcular_porcentagem_ids_unicos_pl(df1, df2, coluna_id='id'):
     len_df2 = len(ids_unicos_df2)
     diferenca = len_df2 - len_df1
 
-    porcentagem = round(((diferenca/len_df2)*100),0)
+    porcentagem = round(((diferenca / len_df2) * 100), 0)
     print(porcentagem)
 
     # print(ids_diferentes)
@@ -183,7 +198,6 @@ def calcular_porcentagem_ids_unicos_pl(df1, df2, coluna_id='id'):
 
 
 def calcular_porcentagem_notificationType_e_retornar_lista(df, coluna_notificationType='notificationType'):
-
     df = df.filter(pl.col('status_sinistro') == 'PENDENTE')
 
     # Conta a quantidade de cada tipo de notificação
@@ -203,4 +217,3 @@ def calcular_porcentagem_notificationType_e_retornar_lista(df, coluna_notificati
     resultado_lista = [(row[coluna_notificationType], f"{row['porcentagem']}") for row in porcentagem.to_dicts()]
 
     return resultado_lista
-
