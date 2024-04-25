@@ -4,6 +4,7 @@ from flask_socketio import SocketIO, emit
 import tables_e_queries as tb
 import funcoes_e_driver as fc
 import polars as pl
+
 # Configurar localização
 
 # Instanciar o aplicativo Flask
@@ -16,159 +17,158 @@ app.config.update(
     SESSION_COOKIE_SECURE=True
 )
 
+
+# Inicializar filtros como dicionário no contexto da aplicação
+
+def load_cpfs():
+    connection = fc.get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT DISTINCT document_number FROM sddo.cotacoes")
+            cpfs = [row[0] for row in cursor.fetchall()]
+    finally:
+        connection.close()
+    return cpfs
+
+
+def load_estados():
+    connection = fc.get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT DISTINCT address_state FROM sddo.cotacoes")
+            estados = [row[0] for row in cursor.fetchall()]
+    finally:
+        connection.close()
+    return estados
+
+
+def load_causas():
+    connection = fc.get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT DISTINCT coverage FROM sddo.cotacoes")
+            causas = [row[0] for row in cursor.fetchall()]
+    finally:
+        connection.close()
+    return causas
+
+
+def load_initial_filters():
+    cpfs = load_cpfs()
+    estados = load_estados()
+    causas = load_causas()
+
+    # Atualizar os filtros no contexto da aplicação
+    app.config["filters"] = {
+        "cpfs": cpfs,
+        "estados": estados,
+        "causas": causas
+    }
+
+
 # Definir uma rota Flask para receber os filtros via POST
 @app.route('/filtros', methods=['POST'])
 def set_filtros():
     data = request.json
-    cpf = data.get('document_number')
-    estado = data.get('estado')
-    causa = data.get('causa')
 
-    with open('document_number.txt', 'w') as file:
-        for item in cpf:
-            file.write(str(item) + '\n')
+    # Verifica se a lista de CPFs é vazia e carrega todos os CPFs se for
+    if data.get('document_number') == [""]:
+        cpfs = load_cpfs()
+    else:
+        cpfs = data.get('document_number', load_cpfs())  # Usa o fallback para recarregar se não especificado
 
-    with open('causa.txt', 'w') as file:
-        for item in causa:
-            file.write(str(item) + '\n')
+    # Verifica se a lista de estados é vazia e carrega todos os estados se for
+    if data.get('estado') == [""]:
+        estados = load_estados()
+    else:
+        estados = data.get('estado', load_estados())  # Usa o fallback para recarregar se não especificado
 
-    with open('estado.txt', 'w') as file:
-        for item in estado:
-            file.write(str(item) + '\n')
+    # Verifica se a lista de causas é vazia e carrega todas as causas se for
+    if data.get('causa') == [""]:
+        causas = load_causas()
+    else:
+        causas = data.get('causa', load_causas())  # Usa o fallback para recarregar se não especificado
 
-    return jsonify({'success': True, 'document_number': cpf or 'reset',
-                    'causa': causa or 'reset', "estado": estado or "reset"})
+    # Atualizar os filtros no contexto da aplicação
+    app.config["filters"] = {
+        "cpfs": cpfs,
+        "estados": estados,
+        "causas": causas
+    }
+
+    return jsonify({'success': True, 'document_number': cpfs, 'estado': estados, 'causa': causas})
+
 
 @app.route('/filtro_sinistros', methods=['GET'])
 def get_clients():
-    table_sinistros = fc.transforma_query_em_sql("SELECT * FROM sddo.sinistros")
-    cpfs = (table_sinistros["document_number"].unique()).to_list()
-    estados = (table_sinistros["state"].unique()).to_list()
-    causas = (table_sinistros["notificationType"].unique()).to_list()
+    # Estabelecer conexão com o banco de dados
+    connection = fc.get_connection()
 
-    return jsonify({"Cpfs": cpfs,"Estados": estados,"Causas": causas})
-
-
-# Função para ler CPFs de um arquivo
-def get_cpf_from_file():
     try:
-        with open('document_number.txt', 'r') as file:
-            cpfs = file.read().strip().split('\n')
-            return cpfs
-    except FileNotFoundError:
-        return None
+        with connection.cursor() as cursor:
+            # Consulta para obter todos os CPFs únicos
+            cursor.execute("SELECT DISTINCT document_number FROM sddo.sinistros")
+            cpfs = [row[0] for row in cursor.fetchall()]
 
-# Função para ler causas de um arquivo
-def get_causa_from_file():
-    try:
-        with open('causa.txt', 'r') as file:
-            causas = file.read().strip().split('\n')
-            return causas
-    except FileNotFoundError:
-        return None
+            # Consulta para obter todos os estados únicos
+            cursor.execute("SELECT DISTINCT state FROM sddo.sinistros")
+            estados = [row[0] for row in cursor.fetchall()]
 
-# Função para ler estados de um arquivo
-def get_estado_from_file():
-    try:
-        with open('estado.txt', 'r') as file:
-            estados = file.read().strip().split('\n')
-            return estados
-    except FileNotFoundError:
-        return None
+            # Consulta para obter todas as causas únicas (notificationType)
+            cursor.execute("SELECT DISTINCT notificationType FROM sddo.sinistros")
+            causas = [row[0] for row in cursor.fetchall()]
 
+    finally:
+        connection.close()
 
-
-# Função para processar filtros e salvar em arquivos
-def process_and_save_filters(data):
-    cpf = data.get('document_number', [])
-    estado = data.get('estado', [])
-    causa = data.get('causa', [])
-
-    # Salva CPFs
-    with open('document_number.txt', 'w') as file:
-        for item in cpf:
-            file.write(str(item) + '\n')
-
-    # Salva causas
-    with open('causa.txt', 'w') as file:
-        for item in causa:
-            file.write(str(item) + '\n')
-
-    # Salva estados
-    with open('estado.txt', 'w') as file:
-        for item in estado:
-            file.write(str(item) + '\n')
-
-    return {'success': True, 'document_number': cpf or 'reset', 'causa': causa or 'reset', "estado": estado or "reset"}
+    return jsonify({"Cpfs": cpfs, "Estados": estados, "Causas": causas})
 
 
 def background_task():
     """Função que roda em background para enviar dados periodicamente."""
     while True:
+        (table_sinistro, table_emissoes, table_cotacoes,
+         table_sinistro_tempo_medio, tempo_medio_resposta, ticket_medio, ticket_medio_policy, preco_medio_cotação,
+         apolices_ativas) = tb.retorna_dados(cpfs=app.config["filters"]["cpfs"],
+                                                  estados=app.config["filters"]["estados"],
+                                                  causas=app.config["filters"]["causas"])
 
-        cpfs = get_cpf_from_file()
-        causas = get_causa_from_file()
-        estados = get_estado_from_file()
+        df_cotacao_filtrada = table_cotacoes.unique(subset="id")
 
-        (table_sinistro, table_emissoes, table_cotacoes, table_sinistros_unica, table_emissoes_unica,
-         table_sinistro_tempo_medio, sinistros_aprovados, sinistros_recusados, sinistros_em_aberto,
-         sinistros_fechados, tempo_medio_resposta, ticket_medio, ticket_medio_policy, preco_medio_cotação,
-         apolices_ativas,
-         table_cotacoes_unica) = tb.retorna_dados()
+        df_filtrado_emissoes = table_emissoes.unique(subset="id")
 
-        if cpfs is None or cpfs == [""]:
-            cpfs = table_cotacoes["document_number"].unique()
-            # print(cpfs)
-            # print(type(cpfs))
-
-        if estados is None or estados == [""]:
-            estados = table_cotacoes["address_state"].unique()
-            # print(estados)
-            # print(type(estados))
-
-        if causas is None or causas == [""]:
-            causas = table_emissoes["coverage_name"].unique()
-            # print(causas)
-            # print(type(causas))
-
-        df_cotacao_filtrada = table_cotacoes.filter(
-            (pl.col('document_number').is_in(cpfs)) &
-            (pl.col('address_state').is_in(estados)) &
-            (pl.col('coverage').is_in(causas)))
-        df_cotacao_filtrada = df_cotacao_filtrada.unique(subset="id")
-
-        df_filtrado_emissoes = table_emissoes.filter(
-            (pl.col('document_number').is_in(cpfs)) &
-            (pl.col('holder_address_state').is_in(estados)) &
-            (pl.col('coverage_name').is_in(causas)))
-        df_filtrado_emissoes = df_filtrado_emissoes.unique(subset="id")
-
-        df_filtrado_sinistros = table_sinistros_unica.filter(
-            (pl.col('document_number').is_in(cpfs)) &
-            (pl.col('state').is_in(estados)) &
-            (pl.col('notificationType').is_in(causas)))
-        df_filtrado_sinistros = df_filtrado_sinistros.unique(subset="id")
+        # df_filtrado_sinistros = table_sinistros_unica.filter(
+        #     (pl.col('document_number').is_in(cpfs)) &
+        #     (pl.col('state').is_in(estados)) &
+        #     (pl.col('notificationType').is_in(causas)))
+        df_filtrado_sinistros = table_sinistro.unique(subset="id")
         print(df_filtrado_sinistros.columns)
 
-        date_sinistro, quantidade_sinistro,percentua_sinistro = fc.retorna_valores_quantidade_por_tempo_sinistro(df_filtrado_sinistros)
-        data_cotacao,quantidade_cotacao,percentua_cotacao = fc.retorna_valores_quantidade_por_tempo_cotacao(df_cotacao_filtrada)
+        date_sinistro, quantidade_sinistro, percentua_sinistro = fc.retorna_valores_quantidade_por_tempo_sinistro(
+            df_filtrado_sinistros)
+        data_cotacao, quantidade_cotacao, percentua_cotacao = fc.retorna_valores_quantidade_por_tempo_cotacao(
+            df_cotacao_filtrada)
         date_sinistro = date_sinistro.dt.strftime('%Y-%m-%d').tolist()
         quantidade_sinistro = quantidade_sinistro.to_list()
-        date_emissao,quantidade_emissao,percentua_emissao = fc.retorna_valores_quantidade_por_tempo_emissao(df_filtrado_emissoes)
+        date_emissao, quantidade_emissao, percentua_emissao = fc.retorna_valores_quantidade_por_tempo_emissao(
+            df_filtrado_emissoes)
 
-        apolices_em_desuso = fc.calcular_porcentagem_ids_unicos_pl(df_filtrado_sinistros,df_filtrado_emissoes,coluna_id="id")
+        apolices_em_desuso = fc.calcular_porcentagem_ids_unicos_pl(df_filtrado_sinistros, df_filtrado_emissoes,
+                                                                   coluna_id="id")
 
-        tipos_notificacao_e_porcentagens = fc.calcular_porcentagem_notificationType_e_retornar_lista(df_filtrado_sinistros)
+        tipos_notificacao_e_porcentagens = fc.calcular_porcentagem_notificationType_e_retornar_lista(
+            df_filtrado_sinistros)
 
-        status_sinistro_M,status_sinistro_F = fc.retorna_valores_genero(df_filtrado_sinistros)
+        status_sinistro_M, status_sinistro_F = fc.retorna_valores_genero(df_filtrado_sinistros)
 
-        num_cotacoes, num_emissoes = fc.retorna_valores_cotacao_emissao(df_cotacao_filtrada,df_filtrado_emissoes)
+        num_cotacoes, num_emissoes = fc.retorna_valores_cotacao_emissao(df_cotacao_filtrada, df_filtrado_emissoes)
 
-        (recusado,pendente,aprovado,porcentagem_recusado,porcentagem_pendente,porcentagem_aprovado,
-         porcentagem_sinistro_aberto,porcentagem_sinistro_fechado,
-         porcentagem_sinistros_pagos,porcentagem_sinistros_recusados) = fc.retorna_status_sinistro(df_filtrado_sinistros)
+        (recusado, pendente, aprovado, porcentagem_recusado, porcentagem_pendente, porcentagem_aprovado,
+         porcentagem_sinistro_aberto, porcentagem_sinistro_fechado,
+         porcentagem_sinistros_pagos, porcentagem_sinistros_recusados) = fc.retorna_status_sinistro(
+            df_filtrado_sinistros)
 
-        estado_sinistro,sinistro_por_estado = fc.retorna_sinistro_por_estado(df_filtrado_sinistros)
+        estado_sinistro, sinistro_por_estado = fc.retorna_sinistro_por_estado(df_filtrado_sinistros)
 
         cotacoes = df_cotacao_filtrada.shape[0]
         contratacoes = df_filtrado_emissoes.shape[0]
@@ -177,7 +177,6 @@ def background_task():
         apolices_ativas = df_filtrado_emissoes.shape[0]
         total_sinistros = df_filtrado_sinistros.shape[0]
         tempo_medio_resposta = tempo_medio_resposta
-
 
         print(f"quantidade list {data_cotacao}")
 
@@ -198,14 +197,14 @@ def background_task():
             "sinistros_por_estado": sinistro_por_estado,
             "data_sinisto": date_sinistro,
             "quantidade_sinistro": quantidade_sinistro,
-            "percentual_sinisto":percentua_sinistro,
-            "data_cotacao":data_cotacao,
-            "quantidade_cotacao":quantidade_cotacao,
+            "percentual_sinisto": percentua_sinistro,
+            "data_cotacao": data_cotacao,
+            "quantidade_cotacao": quantidade_cotacao,
             "percentual_cotacao": percentua_cotacao,
-            "data_emissao":date_emissao,
-            "quantidade_emissao":quantidade_emissao,
-            "percentual_emissao":percentua_emissao,
-            "porcentagem_apolices_em_desuso":apolices_em_desuso,
+            "data_emissao": date_emissao,
+            "quantidade_emissao": quantidade_emissao,
+            "percentual_emissao": percentua_emissao,
+            "porcentagem_apolices_em_desuso": apolices_em_desuso,
             "porcentagem_recusado": porcentagem_recusado,
             "porcentagem_pendente": porcentagem_pendente,
             "porcentagem_aprovado": porcentagem_aprovado,
@@ -214,8 +213,6 @@ def background_task():
             "porcentagem_sinistros_fechado": porcentagem_sinistro_fechado,
             "porcentagem_sinistros_pagos": porcentagem_sinistros_pagos,
             "porcentagem_sinistros_recusados": porcentagem_sinistros_recusados
-
-
 
         }
         # Usar o emit dentro do contexto do SocketIO para enviar para todos os clientes conectados
@@ -233,5 +230,5 @@ def on_connect():
 
 
 if __name__ == '__main__':
-
+    load_initial_filters()  # Carrega os filtros com todos os valores únicos
     socketio.run(app, host='0.0.0.0', port=8054, debug=True, allow_unsafe_werkzeug=True)
