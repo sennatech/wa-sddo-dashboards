@@ -148,7 +148,7 @@ def background_task():
             df_filtrado_sinistros)
         data_cotacao, quantidade_cotacao, percentua_cotacao = fc.retorna_valores_quantidade_por_tempo_cotacao(
             df_cotacao_filtrada)
-        date_sinistro = date_sinistro.dt.strftime('%Y-%m-%d').tolist()
+        date_sinistro = date_sinistro.dt.strftime('%Y-%m-%d').to_list()
         quantidade_sinistro = quantidade_sinistro.to_list()
         date_emissao, quantidade_emissao, percentua_emissao = fc.retorna_valores_quantidade_por_tempo_emissao(
             df_filtrado_emissoes)
@@ -215,6 +215,7 @@ def background_task():
             "porcentagem_sinistros_recusados": porcentagem_sinistros_recusados
 
         }
+        print(arrays)
         # Usar o emit dentro do contexto do SocketIO para enviar para todos os clientes conectados
         socketio.emit('response_data', arrays)
         socketio.sleep(1)
