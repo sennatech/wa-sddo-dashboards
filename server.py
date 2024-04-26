@@ -5,6 +5,7 @@ import tables_e_queries as tb
 import funcoes_e_driver as fc
 import polars as pl
 from datetime import date
+from threading import Thread
 
 # Configurar localização
 
@@ -234,7 +235,15 @@ def on_connect():
     # Iniciar a tarefa de background quando um cliente se conectar
     socketio.start_background_task(background_task)
 
+def start_background_task():
+    thread = Thread(target=background_task())
+    thread.start()
+
+def load_initial_filters_thread():
+    thread = Thread(target=load_initial_filters)
+    thread.start()
+
 
 if __name__ == '__main__':
-    load_initial_filters()  # Carrega os filtros com todos os valores únicos
+    load_initial_filters_thread()  # Carrega os filtros com todos os valores únicos
     socketio.run(app, host='0.0.0.0', port=8054, debug=True, allow_unsafe_werkzeug=True)
