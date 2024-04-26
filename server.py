@@ -4,6 +4,7 @@ from flask_socketio import SocketIO, emit
 import tables_e_queries as tb
 import funcoes_e_driver as fc
 import polars as pl
+from datetime import date
 
 # Configurar localização
 
@@ -168,8 +169,7 @@ def background_task():
          porcentagem_sinistros_pagos, porcentagem_sinistros_recusados) = fc.retorna_status_sinistro(
             df_filtrado_sinistros)
 
-        estado_sinistro, sinistro_por_estado = fc.retorna_sinistro_por_estado(df_filtrado_sinistros)
-
+        sinistro_por_estado = fc.retorna_sinistro_por_estado(df_filtrado_sinistros)
         cotacoes = df_cotacao_filtrada.shape[0]
         contratacoes = df_filtrado_emissoes.shape[0]
         ticket_medio = round(df_filtrado_emissoes["amount"].mean())
@@ -193,15 +193,14 @@ def background_task():
             "tempo_medio_resposta": tempo_medio_resposta,
             "total_sinistros": total_sinistros,
             "apolices_ativas": apolices_ativas,
-            "estados_sinistro": estado_sinistro,
-            "sinistros_por_estado": sinistro_por_estado,
-            "data_sinisto": date_sinistro,
+            "sinistros_por_estado": sinistro_por_estado,  # Assume-se que este já esteja em formato de dicionário
+            "data_sinisto": [d.isoformat() if isinstance(d, date) else d for d in date_sinistro],
             "quantidade_sinistro": quantidade_sinistro,
             "percentual_sinisto": percentua_sinistro,
-            "data_cotacao": data_cotacao,
+            "data_cotacao": [d.isoformat() if isinstance(d, date) else d for d in data_cotacao],
             "quantidade_cotacao": quantidade_cotacao,
             "percentual_cotacao": percentua_cotacao,
-            "data_emissao": date_emissao,
+            "data_emissao": [d.isoformat() if isinstance(d, date) else d for d in date_emissao],
             "quantidade_emissao": quantidade_emissao,
             "percentual_emissao": percentua_emissao,
             "porcentagem_apolices_em_desuso": apolices_em_desuso,
@@ -213,8 +212,14 @@ def background_task():
             "porcentagem_sinistros_fechado": porcentagem_sinistro_fechado,
             "porcentagem_sinistros_pagos": porcentagem_sinistros_pagos,
             "porcentagem_sinistros_recusados": porcentagem_sinistros_recusados
-
         }
+
+        # Converter os dados para JSON serializáveis
+        for key, value in arrays.items():
+            if isinstance(value, pl.Series):
+                arrays[key] = value.to_list()  # Converte Polars Series para lista
+            elif isinstance(value, pl.DataFrame):
+                arrays[key] = value.to_dicts()
         print(arrays)
         # Usar o emit dentro do contexto do SocketIO para enviar para todos os clientes conectados
         socketio.emit('response_data', arrays)

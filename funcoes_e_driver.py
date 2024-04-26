@@ -215,12 +215,27 @@ def retorna_valores_quantidade_por_tempo_cotacao(dataframe_cotacao):
 
 def retorna_valores_quantidade_por_tempo_emissao(dataframe_emissao):
     return retorna_valores_quantidade_por_tempo_sinistro_cotacao(dataframe_emissao, 'date')
+
+
 def retorna_sinistro_por_estado(df_sinistro_filtrado):
     try:
-        agrupado_por_estado = df_sinistro_filtrado.groupby("state").agg(pl.count().alias('count'))
-        agrupado_por_estado = agrupado_por_estado.sort('count')
-        if agrupado_por_estado.shape[0] == 0:
-            raise ValueError("DataFrame vazio após o agrupamento por estado.")
-        return agrupado_por_estado
+        # Ordenando os dados por estado antes do agrupamento
+        df_ordenado = df_sinistro_filtrado.sort("state")
+
+        # Agrupando os dados por estado e contando as ocorrências
+        agrupado_por_estado = df_ordenado.groupby("state").agg(pl.count())
+
+        # Convertendo o resultado para uma lista de dicionários
+        list_of_dicts = agrupado_por_estado.to_dicts()
+
+        # Ordenando explicitamente e criando um dicionário final
+        resultado_dict = {row['state']: row['count'] for row in sorted(list_of_dicts, key=lambda x: x['state'])}
+
+
+        # Verificação se o dicionário está vazio
+        if len(resultado_dict) == 0:
+            raise ValueError("Dicionário vazio após o agrupamento por estado.")
+
+        return resultado_dict
     except Exception as e:
         return f"Erro: {str(e)}"
