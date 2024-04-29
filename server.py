@@ -145,7 +145,7 @@ def background_task():
         #     (pl.col('state').is_in(estados)) &
         #     (pl.col('notificationType').is_in(causas)))
         df_filtrado_sinistros = table_sinistro.unique(subset="id")
-        print(df_filtrado_sinistros.columns)
+        # print(df_filtrado_sinistros.columns)
 
         dicionario_cotacao = fc.retorna_valores_quantidade_por_tempo(
             df_cotacao_filtrada)
@@ -213,6 +213,7 @@ def background_task():
         # Converter os dados para JSON serializáveis
         data = fc.process_data(arrays)
         # Usar o emit dentro do contexto do SocketIO para enviar para todos os clientes conectados
+        print(f"dados enviados {data}")
         socketio.emit('response_data', data)
         socketio.sleep(1)
 

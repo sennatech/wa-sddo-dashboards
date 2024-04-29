@@ -64,10 +64,10 @@ def retorna_valores_quantidade_por_tempo(dataframe):
             for row in eventos_dicts
         }
 
-        print(f"Eventos por tempo: {resultado_dict}")
+        # print(f"Eventos por tempo: {resultado_dict}")
         return resultado_dict
     except Exception as e:
-        print(f"Erro: {str(e)}")
+        # print(f"Erro: {str(e)}")
         return {}
 
 
@@ -168,7 +168,7 @@ def calcular_porcentagem_ids_unicos_pl(df1, df2, coluna_id='id'):
     diferenca = len_df2 - len_df1
 
     porcentagem = round(((diferenca / len_df2) * 100), 0)
-    print(porcentagem)
+    # print(porcentagem)
 
     # print(ids_diferentes)
     # Calcula a porcentagem de IDs únicos em df1 em relação ao total de IDs únicos em df2
