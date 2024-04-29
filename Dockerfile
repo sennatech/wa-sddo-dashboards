@@ -36,7 +36,7 @@ COPY . .
 EXPOSE 8054
 
 # Comando para rodar a aplicação
-CMD ["/bin/sh", "-c", "cd /app/poc-dashboards-python && git pull origin melhorias_no_codigo && python server.py"]
+CMD ["/bin/sh", "-c", "cd /app/poc-dashboards-python && git pull origin melhorias_no_codigo  && python server.py"]
 
 # Definir autor da imagem
 LABEL authors=luyza

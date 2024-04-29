@@ -14,7 +14,7 @@ def retorna_dados(cpfs, estados, causas):
     AND state IN {estados}
     AND notificationType IN {causas}
     """
-    print(f"sql sinisstros {select_sql_sinistros}")
+    # print(f"sql sinisstros {select_sql_sinistros}")
 
     select_sql_emissoes = f"""
     SELECT  * FROM sddo.emissoes
@@ -23,7 +23,7 @@ def retorna_dados(cpfs, estados, causas):
     AND coverage_name IN {causas}
     """
 
-    print(f"sql emissao  {select_sql_emissoes}")
+    # print(f"sql emissao  {select_sql_emissoes}")
 
 
     select_sql_cotacoes = f"""
@@ -32,7 +32,7 @@ def retorna_dados(cpfs, estados, causas):
     AND address_state IN {estados}
     AND coverage IN {causas}
     """
-    print(f"sql cotcao  {select_sql_cotacoes}")
+    # print(f"sql cotcao  {select_sql_cotacoes}")
 
 
     select_view_tempo_medio = "SELECT * FROM dbo.vw_sinistros_diferenca_eventtime"
