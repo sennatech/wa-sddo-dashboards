@@ -40,36 +40,34 @@ def transforma_query_em_sql(sql_query):
 
 def retorna_valores_quantidade_por_tempo(dataframe):
     try:
-        # Group by date and calculate the number of claims
+        # Agrupar por data e calcular o número de eventos
         eventos_por_tempo = dataframe.groupby('date').agg(pl.count().alias('quantidade'))
         if eventos_por_tempo.shape[0] == 0:
             raise ValueError("DataFrame vazio após o agrupamento.")
 
-        # Sort results by date
+        # Ordenar resultados por data
         eventos_por_tempo = eventos_por_tempo.sort('date')
 
-        # Calculate the percentage variation
+        # Calcular a variação percentual
         quantidade_shifted = eventos_por_tempo['quantidade'].shift(-1).fill_null(0)
         variacao_percentual = ((quantidade_shifted / eventos_por_tempo['quantidade'] - 1) * 100).round()
 
-        # Create a new DataFrame with the percentage variation added
+        # Criar um novo DataFrame adicionando a variação percentual
         eventos_por_tempo = eventos_por_tempo.with_columns(
             variacao_percentual.alias('variacao_percentual')
         )
 
-        # Convert the DataFrame to a dictionary with date as the key
-        eventos_dicts = eventos_por_tempo.to_dicts()
-        resultado_dict = {
-            row['date'].isoformat(): {'quantidade': row['quantidade'], 'variacao_percentual': row['variacao_percentual']}
-            for row in eventos_dicts
-        }
+        # Converter o DataFrame para uma lista de dicionários
+        eventos_lista = [
+            {'date': row['date'].isoformat(), 'quantidade': row['quantidade'], 'variacao_percentual': row['variacao_percentual']}
+            for row in eventos_por_tempo.to_dicts()
+        ]
 
-        # print(f"Eventos por tempo: {resultado_dict}")
-        return resultado_dict
+        # print(f"Eventos por tempo: {eventos_lista}")
+        return eventos_lista
     except Exception as e:
         # print(f"Erro: {str(e)}")
-        return {}
-
+        return []
 
 
 
@@ -193,9 +191,9 @@ def calcular_porcentagem_notificationType_e_retornar_lista(df, coluna_notificati
     # Ordenar a contagem por tipo de notificação para garantir consistência no retorno
     contagem = contagem.sort(coluna_notificationType)
 
-    # Prepara os resultados para serem retornados como uma lista de tuplas
+    # Prepara os resultados para serem retornados como uma lista de dicionários
     resultado_lista = [
-        (tipo, percent) for tipo, percent in zip(contagem[coluna_notificationType].to_list(), contagem['porcentagem'].to_list())
+        {'tipo': tipo, 'porcentagem': percent} for tipo, percent in zip(contagem[coluna_notificationType].to_list(), contagem['porcentagem'].to_list())
     ]
 
     return resultado_lista
@@ -213,20 +211,22 @@ def retorna_sinistro_por_estado(df_sinistro_filtrado):
         df_ordenado = df_sinistro_filtrado.sort("state")
 
         # Agrupando os dados por estado e contando as ocorrências
-        agrupado_por_estado = df_ordenado.groupby("state").agg(pl.count())
+        agrupado_por_estado = df_ordenado.groupby("state").agg(pl.count().alias('quantidade'))
 
         # Convertendo o resultado para uma lista de dicionários
-        list_of_dicts = agrupado_por_estado.to_dicts()
+        list_of_dicts = [
+            {'state': row['state'], 'quantidade': row['quantidade']}
+            for row in agrupado_por_estado.to_dicts()
+        ]
 
-        # Ordenando explicitamente e criando um dicionário final
-        resultado_dict = {row['state']: row['count'] for row in sorted(list_of_dicts, key=lambda x: x['state'])}
+        # Ordenando explicitamente a lista de dicionários por estado (opcional, dependendo da necessidade)
+        list_of_dicts.sort(key=lambda x: x['state'])
 
+        # Verificação se a lista está vazia
+        if not list_of_dicts:
+            raise ValueError("Lista vazia após o agrupamento por estado.")
 
-        # Verificação se o dicionário está vazio
-        if len(resultado_dict) == 0:
-            raise ValueError("Dicionário vazio após o agrupamento por estado.")
-
-        return resultado_dict
+        return list_of_dicts
     except Exception as e:
         return f"Erro: {str(e)}"
 
