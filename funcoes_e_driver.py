@@ -190,6 +190,9 @@ def calcular_porcentagem_notificationType_e_retornar_lista(df, coluna_notificati
         (pl.col('quantidade') / total_notificacoes * 100).round().alias('porcentagem')
     )
 
+    # Ordenar a contagem por tipo de notificação para garantir consistência no retorno
+    contagem = contagem.sort(coluna_notificationType)
+
     # Prepara os resultados para serem retornados como uma lista de tuplas
     resultado_lista = [
         (tipo, percent) for tipo, percent in zip(contagem[coluna_notificationType].to_list(), contagem['porcentagem'].to_list())
