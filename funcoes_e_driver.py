@@ -1,6 +1,7 @@
 import textwrap
 import pyodbc
 import polars as pl
+
 from credentials import username, password
 
 # Conectando com o banco de dados
@@ -37,24 +38,39 @@ def transforma_query_em_sql(sql_query):
         return f"Erro: {str(e)}"
 
 
-def retorna_valores_quantidade_por_tempo_sinistro(dataframe):
+def retorna_valores_quantidade_por_tempo(dataframe):
     try:
+        # Group by date and calculate the number of claims
         eventos_por_tempo = dataframe.groupby('date').agg(pl.count().alias('quantidade'))
         if eventos_por_tempo.shape[0] == 0:
             raise ValueError("DataFrame vazio após o agrupamento.")
 
+        # Sort results by date
         eventos_por_tempo = eventos_por_tempo.sort('date')
 
+        # Calculate the percentage variation
         quantidade_shifted = eventos_por_tempo['quantidade'].shift(-1).fill_null(0)
-        variação_percentual = (quantidade_shifted / eventos_por_tempo['quantidade'] - 1) * 100
+        variacao_percentual = ((quantidade_shifted / eventos_por_tempo['quantidade'] - 1) * 100).round()
 
+        # Create a new DataFrame with the percentage variation added
         eventos_por_tempo = eventos_por_tempo.with_columns(
-            variação_percentual.round().alias('variação_percentual')
+            variacao_percentual.alias('variacao_percentual')
         )
 
-        return eventos_por_tempo
+        # Convert the DataFrame to a dictionary with date as the key
+        eventos_dicts = eventos_por_tempo.to_dicts()
+        resultado_dict = {
+            row['date'].isoformat(): {'quantidade': row['quantidade'], 'variacao_percentual': row['variacao_percentual']}
+            for row in eventos_dicts
+        }
+
+        print(f"Eventos por tempo: {resultado_dict}")
+        return resultado_dict
     except Exception as e:
-        return f"Erro: {str(e)}"
+        print(f"Erro: {str(e)}")
+        return {}
+
+
 
 
 def retorna_valores_genero(df_filtrado_sinistros):
@@ -137,7 +153,7 @@ def calc_status_stats(recusado, pendente, aprovado, total):
         return (recusado, pendente, aprovado, porcentagem_recusado, porcentagem_pendente, porcentagem_aprovado,
                 porcentagem_sinistros_aberto, porcentagem_sinistros_fechado)
     except ZeroDivisionError:
-        return ("N/A", "N/A", "N/A", 0, 0, 0, 0, 0)  # Tratamento para divisão por zero se total == 0
+        return (0, 0, 0, 0, 0, 0, 0, 0)  # Tratamento para divisão por zero se total == 0
 
 
 def calcular_porcentagem_ids_unicos_pl(df1, df2, coluna_id='id'):
@@ -187,35 +203,6 @@ def retorna_valores_cotacao_emissao(df_cotacoes, df_emissoes):
 
     return num_cotacoes, num_emissoes
 
-def retorna_valores_quantidade_por_tempo_sinistro_cotacao(dataframe, coluna_data='date'):
-    # Assegura que a coluna de data está no formato de data corretamente, se não estiver, converte
-    if dataframe[coluna_data].dtype != pl.Date:
-        dataframe = dataframe.with_columns(dataframe[coluna_data].str.strptime(pl.Date, "%Y-%m-%d"))
-
-        # Agrupa por data, somando as quantidades de eventos por dia
-    eventos_agrupados = dataframe.groupby(coluna_data).agg(pl.count().alias('quantidade'))
-
-    # Calculando a variação percentual de quantidade dia a dia
-    variação_percentual = eventos_agrupados['quantidade'].pct_change() * 100
-
-    eventos_agrupados = eventos_agrupados.with_columns(
-        variação_percentual.round().alias('variação_percentual')
-    ).fill_null(0)  # Preenche valores nulos, especialmente para a primeira entrada
-
-    # Preparar os dados para retorno
-    date_list = eventos_agrupados[coluna_data].to_list()
-    quantidade_list = eventos_agrupados['quantidade'].to_list()
-    variacao_percentual_list = eventos_agrupados['variação_percentual'].to_list()
-
-    return date_list, quantidade_list, variacao_percentual_list
-
-
-def retorna_valores_quantidade_por_tempo_cotacao(dataframe_cotacao):
-    return retorna_valores_quantidade_por_tempo_sinistro_cotacao(dataframe_cotacao, 'date')
-
-def retorna_valores_quantidade_por_tempo_emissao(dataframe_emissao):
-    return retorna_valores_quantidade_por_tempo_sinistro_cotacao(dataframe_emissao, 'date')
-
 
 def retorna_sinistro_por_estado(df_sinistro_filtrado):
     try:
@@ -239,3 +226,12 @@ def retorna_sinistro_por_estado(df_sinistro_filtrado):
         return resultado_dict
     except Exception as e:
         return f"Erro: {str(e)}"
+
+def process_data(data):
+    # Converter os dados para JSON serializáveis
+    for key, value in data.items():
+        if isinstance(value, pl.Series):
+            data[key] = value.to_list()  # Converte Polars Series para lista
+        elif isinstance(value, pl.DataFrame):
+            data[key] = value.to_dicts()
+    return data

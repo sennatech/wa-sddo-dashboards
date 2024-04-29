@@ -128,6 +128,7 @@ def get_clients():
 
 def background_task():
     """Função que roda em background para enviar dados periodicamente."""
+
     while True:
         (table_sinistro, table_emissoes, table_cotacoes,
          table_sinistro_tempo_medio, tempo_medio_resposta, ticket_medio, ticket_medio_policy, preco_medio_cotação,
@@ -146,14 +147,13 @@ def background_task():
         df_filtrado_sinistros = table_sinistro.unique(subset="id")
         print(df_filtrado_sinistros.columns)
 
-        date_sinistro, quantidade_sinistro, percentua_sinistro = fc.retorna_valores_quantidade_por_tempo_sinistro(
-            df_filtrado_sinistros)
-        data_cotacao, quantidade_cotacao, percentua_cotacao = fc.retorna_valores_quantidade_por_tempo_cotacao(
+        dicionario_cotacao = fc.retorna_valores_quantidade_por_tempo(
             df_cotacao_filtrada)
-        date_sinistro = date_sinistro.dt.strftime('%Y-%m-%d').to_list()
-        quantidade_sinistro = quantidade_sinistro.to_list()
-        date_emissao, quantidade_emissao, percentua_emissao = fc.retorna_valores_quantidade_por_tempo_emissao(
+        dicionario_emissao = fc.retorna_valores_quantidade_por_tempo(
             df_filtrado_emissoes)
+        dicionario_sinistro = fc.retorna_valores_quantidade_por_tempo(
+            df_filtrado_sinistros)
+
 
         apolices_em_desuso = fc.calcular_porcentagem_ids_unicos_pl(df_filtrado_sinistros, df_filtrado_emissoes,
                                                                    coluna_id="id")
@@ -179,7 +179,8 @@ def background_task():
         total_sinistros = df_filtrado_sinistros.shape[0]
         tempo_medio_resposta = tempo_medio_resposta
 
-        print(f"quantidade list {data_cotacao}")
+
+
 
         arrays = {
             "sinistro_M": status_sinistro_M,
@@ -195,15 +196,9 @@ def background_task():
             "total_sinistros": total_sinistros,
             "apolices_ativas": apolices_ativas,
             "sinistros_por_estado": sinistro_por_estado,  # Assume-se que este já esteja em formato de dicionário
-            "data_sinisto": [d.isoformat() if isinstance(d, date) else d for d in date_sinistro],
-            "quantidade_sinistro": quantidade_sinistro,
-            "percentual_sinisto": percentua_sinistro,
-            "data_cotacao": [d.isoformat() if isinstance(d, date) else d for d in data_cotacao],
-            "quantidade_cotacao": quantidade_cotacao,
-            "percentual_cotacao": percentua_cotacao,
-            "data_emissao": [d.isoformat() if isinstance(d, date) else d for d in date_emissao],
-            "quantidade_emissao": quantidade_emissao,
-            "percentual_emissao": percentua_emissao,
+            "valores_por_data_sinisto": dicionario_sinistro,
+            "valores_por_data_cotacao": dicionario_cotacao,
+            "valores_por_data_emissao": dicionario_emissao,
             "porcentagem_apolices_em_desuso": apolices_em_desuso,
             "porcentagem_recusado": porcentagem_recusado,
             "porcentagem_pendente": porcentagem_pendente,
@@ -216,14 +211,9 @@ def background_task():
         }
 
         # Converter os dados para JSON serializáveis
-        for key, value in arrays.items():
-            if isinstance(value, pl.Series):
-                arrays[key] = value.to_list()  # Converte Polars Series para lista
-            elif isinstance(value, pl.DataFrame):
-                arrays[key] = value.to_dicts()
-        print(arrays)
+        data = fc.process_data(arrays)
         # Usar o emit dentro do contexto do SocketIO para enviar para todos os clientes conectados
-        socketio.emit('response_data', arrays)
+        socketio.emit('response_data', data)
         socketio.sleep(1)
 
         # Aguardar 3 segundos antes de enviar o próximo conjunto de dados
@@ -245,5 +235,15 @@ def load_initial_filters_thread():
 
 
 if __name__ == '__main__':
-    load_initial_filters_thread()  # Carrega os filtros com todos os valores únicos
+    # Create a thread to load filters
+    filter_thread = Thread(target=load_initial_filters)
+
+    # Start the thread
+    filter_thread.start()
+
+    # Wait for the filter loading thread to complete
+    filter_thread.join()
+
+    # Start the Flask-SocketIO server
+    print("Starting server...")
     socketio.run(app, host='0.0.0.0', port=8054, debug=True, allow_unsafe_werkzeug=True)
