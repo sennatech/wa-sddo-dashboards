@@ -4,7 +4,7 @@ from flask_socketio import SocketIO, emit
 import tables_e_queries as tb
 import funcoes_e_driver as fc
 import polars as pl
-from datetime import date
+from datetime import date, datetime
 from threading import Thread
 
 # Configurar localização
@@ -44,6 +44,17 @@ def load_estados():
     return estados
 
 
+def load_datas():
+    connection = fc.get_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT DISTINCT date FROM sddo.cotacoes")
+            datas = [row[0] for row in cursor.fetchall()]
+    finally:
+        connection.close()
+    return datas
+
+
 def load_causas():
     connection = fc.get_connection()
     try:
@@ -59,46 +70,66 @@ def load_initial_filters():
     cpfs = load_cpfs()
     estados = load_estados()
     causas = load_causas()
+    datas = load_datas()
 
     # Atualizar os filtros no contexto da aplicação
     app.config["filters"] = {
         "cpfs": cpfs,
         "estados": estados,
-        "causas": causas
+        "causas": causas,
+        "datas": datas
     }
 
 
 # Definir uma rota Flask para receber os filtros via POST
+from flask import request, jsonify
+from datetime import datetime
+
 @app.route('/filtros', methods=['POST'])
 def set_filtros():
-    data = request.json
+    try:
+        data = request.json
 
-    # Verifica se a lista de CPFs é vazia e carrega todos os CPFs se for
-    if data.get('document_number') == [""]:
-        cpfs = load_cpfs()
-    else:
-        cpfs = data.get('document_number', load_cpfs())  # Usa o fallback para recarregar se não especificado
+        # Verifica se a lista de CPFs é vazia e carrega todos os CPFs se for
+        if data.get('document_number') == [""]:
+            cpfs = load_cpfs()
+        else:
+            cpfs = data.get('document_number', load_cpfs())  # Usa o fallback para recarregar se não especificado
 
-    # Verifica se a lista de estados é vazia e carrega todos os estados se for
-    if data.get('estado') == [""]:
-        estados = load_estados()
-    else:
-        estados = data.get('estado', load_estados())  # Usa o fallback para recarregar se não especificado
+        # Verifica se a lista de estados é vazia e carrega todos os estados se for
+        if data.get('estado') == [""]:
+            estados = load_estados()
+        else:
+            estados = data.get('estado', load_estados())  # Usa o fallback para recarregar se não especificado
 
-    # Verifica se a lista de causas é vazia e carrega todas as causas se for
-    if data.get('causa') == [""]:
-        causas = load_causas()
-    else:
-        causas = data.get('causa', load_causas())  # Usa o fallback para recarregar se não especificado
+        # Verifica se a lista de causas é vazia e carrega todas as causas se for
+        if data.get('causa') == [""]:
+            causas = load_causas()
+        else:
+            causas = data.get('causa', load_causas())  # Usa o fallback para recarregar se não especificado
 
-    # Atualizar os filtros no contexto da aplicação
-    app.config["filters"] = {
-        "cpfs": cpfs,
-        "estados": estados,
-        "causas": causas
-    }
+        # Verifica se a lista de datas é vazia e carrega todas as datas se for
+        if data.get('data') == [""]:
+            datas = load_datas()
+        else:
+            datas = data.get('data', load_datas())
+            datas = [datetime.strptime(date, '%Y-%m-%d').date() for date in datas]
 
-    return jsonify({'success': True, 'document_number': cpfs, 'estado': estados, 'causa': causas})
+        # Atualizar os filtros no contexto da aplicação
+        app.config["filters"] = {
+            "cpfs": cpfs,
+            "estados": estados,
+            "causas": causas,
+            "datas": datas
+        }
+
+        return jsonify({'success': True, 'document_number': cpfs, 'estado': estados, 'causa': causas, "data": datas})
+
+    except Exception as e:
+        # Loga o erro e retorna uma mensagem de erro genérica
+        app.logger.error(f"An error occurred: {e}")
+        return jsonify({'success': False, 'message': 'An error occurred while processing your request'}), 500
+
 
 
 @app.route('/filtro_sinistros', methods=['GET'])
@@ -120,10 +151,13 @@ def get_clients():
             cursor.execute("SELECT DISTINCT notificationType FROM sddo.sinistros")
             causas = [row[0] for row in cursor.fetchall()]
 
+            cursor.execute("SELECT DISTINCT date FROM sddo.sinistros")
+            datas = [row[0] for row in cursor.fetchall()]
+
     finally:
         connection.close()
 
-    return jsonify({"Cpfs": cpfs, "Estados": estados, "Causas": causas})
+    return jsonify({"Cpfs": cpfs, "Estados": estados, "Causas": causas, "Datas": datas})
 
 
 def background_task():
@@ -131,29 +165,26 @@ def background_task():
 
     while True:
         (table_sinistro, table_emissoes, table_cotacoes,
-         table_sinistro_tempo_medio, tempo_medio_resposta, ticket_medio, ticket_medio_policy, preco_medio_cotação,
+         table_sinistro_tempo_medio, tempo_medio_resposta, preco_medio_cotação,
          apolices_ativas) = tb.retorna_dados(cpfs=app.config["filters"]["cpfs"],
-                                                  estados=app.config["filters"]["estados"],
-                                                  causas=app.config["filters"]["causas"])
+                                             estados=app.config["filters"]["estados"],
+                                             causas=app.config["filters"]["causas"])
 
-        df_cotacao_filtrada = table_cotacoes.unique(subset="id")
-
+        df_filtrado_cotacoes = table_cotacoes.unique(subset="id")
         df_filtrado_emissoes = table_emissoes.unique(subset="id")
-
-        # df_filtrado_sinistros = table_sinistros_unica.filter(
-        #     (pl.col('document_number').is_in(cpfs)) &
-        #     (pl.col('state').is_in(estados)) &
-        #     (pl.col('notificationType').is_in(causas)))
         df_filtrado_sinistros = table_sinistro.unique(subset="id")
-        # print(df_filtrado_sinistros.columns)
+
+        #Filtrando por data aqui, para a query não ficar gigantesca
+        df_filtrado_cotacoes = df_filtrado_cotacoes.filter(pl.col("date").is_in(app.config["filters"]["datas"]))
+        df_filtrado_emissoes = df_filtrado_emissoes.filter(pl.col("date").is_in(app.config["filters"]["datas"]))
+        df_filtrado_sinistros = df_filtrado_sinistros.filter(pl.col("date").is_in(app.config["filters"]["datas"]))
 
         dicionario_cotacao = fc.retorna_valores_quantidade_por_tempo(
-            df_cotacao_filtrada)
+            df_filtrado_cotacoes)
         dicionario_emissao = fc.retorna_valores_quantidade_por_tempo(
             df_filtrado_emissoes)
         dicionario_sinistro = fc.retorna_valores_quantidade_por_tempo(
             df_filtrado_sinistros)
-
 
         apolices_em_desuso = fc.calcular_porcentagem_ids_unicos_pl(df_filtrado_sinistros, df_filtrado_emissoes,
                                                                    coluna_id="id")
@@ -163,7 +194,7 @@ def background_task():
 
         status_sinistro_M, status_sinistro_F = fc.retorna_valores_genero(df_filtrado_sinistros)
 
-        num_cotacoes, num_emissoes = fc.retorna_valores_cotacao_emissao(df_cotacao_filtrada, df_filtrado_emissoes)
+        num_cotacoes, num_emissoes = fc.retorna_valores_cotacao_emissao(df_filtrado_cotacoes, df_filtrado_emissoes)
 
         (recusado, pendente, aprovado, porcentagem_recusado, porcentagem_pendente, porcentagem_aprovado,
          porcentagem_sinistro_aberto, porcentagem_sinistro_fechado,
@@ -171,16 +202,13 @@ def background_task():
             df_filtrado_sinistros)
 
         sinistro_por_estado = fc.retorna_sinistro_por_estado(df_filtrado_sinistros)
-        cotacoes = df_cotacao_filtrada.shape[0]
+        cotacoes = df_filtrado_cotacoes.shape[0]
         contratacoes = df_filtrado_emissoes.shape[0]
         ticket_medio = round(df_filtrado_emissoes["amount"].mean())
         ticket_total = round(df_filtrado_emissoes["amount"].sum())
         apolices_ativas = df_filtrado_emissoes.shape[0]
         total_sinistros = df_filtrado_sinistros.shape[0]
         tempo_medio_resposta = tempo_medio_resposta
-
-
-
 
         arrays = {
             "sinistro_M": status_sinistro_M,
@@ -226,9 +254,11 @@ def on_connect():
     # Iniciar a tarefa de background quando um cliente se conectar
     socketio.start_background_task(background_task)
 
+
 def start_background_task():
     thread = Thread(target=background_task())
     thread.start()
+
 
 def load_initial_filters_thread():
     thread = Thread(target=load_initial_filters)

@@ -20,7 +20,8 @@ def retorna_dados(cpfs, estados, causas):
     SELECT  * FROM sddo.emissoes
     WHERE document_number IN {cpfs}
     AND holder_address_state IN {estados}
-    AND coverage_name IN {causas}
+    AND coverage_name IN {causas}        
+
     """
 
     # print(f"sql emissao  {select_sql_emissoes}")
@@ -30,7 +31,8 @@ def retorna_dados(cpfs, estados, causas):
     SELECT  * FROM sddo.cotacoes
     WHERE document_number IN {cpfs}
     AND address_state IN {estados}
-    AND coverage IN {causas}
+    AND coverage IN {causas}    
+
     """
     # print(f"sql cotcao  {select_sql_cotacoes}")
 
@@ -54,11 +56,9 @@ def retorna_dados(cpfs, estados, causas):
     # sinistros_fechados = table_sinistros_unica.filter(pl.col('status_sinistro') != 'PENDENTE')
 
     tempo_medio_resposta = round(table_sinistro_tempo_medio["resultado_da_diferenca"].mean())
-    ticket_medio = round(table_emissoes["amount"].mean())
-    ticket_medio_policy = round(table_emissoes["amount"].mean())
     num_cotacoes = table_cotacoes.shape[0]
     preco_medio_cotação = round(table_cotacoes["amount"].sum() / num_cotacoes, 2)
     apolices_ativas = table_emissoes.shape[0]
     return (table_sinistro, table_emissoes, table_cotacoes,
-            table_sinistro_tempo_medio, tempo_medio_resposta, ticket_medio, ticket_medio_policy, preco_medio_cotação,
+            table_sinistro_tempo_medio, tempo_medio_resposta, preco_medio_cotação,
             apolices_ativas)
