@@ -65,25 +65,38 @@ def load_causas():
         connection.close()
     return causas
 
+def load_sinistros(cpfs,estados,causas):
+    connection = fc.get_connection()
+    try:
+        cpfs = tuple(cpfs)
+        estados = tuple(estados)
+        causas = tuple(causas)
+        with connection.cursor() as cursor:
+            cursor.execute(f"SELECT DISTINCT id FROM sddo.sinistros WHERE document_number IN {cpfs}AND state IN {estados} AND notificationType IN {causas}")
+            sinistros = [row[0] for row in cursor.fetchall()]
+    finally:
+        connection.close()
+    return sinistros
 
 def load_initial_filters():
     cpfs = load_cpfs()
     estados = load_estados()
     causas = load_causas()
     datas = load_datas()
+    sinistros = load_sinistros(cpfs,estados,causas)
 
     # Atualizar os filtros no contexto da aplicação
     app.config["filters"] = {
         "cpfs": cpfs,
         "estados": estados,
         "causas": causas,
-        "datas": datas
+        "datas": datas,
+        "sinistros": sinistros
     }
 
 
 # Definir uma rota Flask para receber os filtros via POST
-from flask import request, jsonify
-from datetime import datetime
+
 
 @app.route('/filtros', methods=['POST'])
 def set_filtros():
@@ -115,15 +128,21 @@ def set_filtros():
             datas = data.get('data', load_datas())
             datas = [datetime.strptime(date, '%Y-%m-%d').date() for date in datas]
 
+        if data.get('sinistro') == [""]:
+            sinistros = load_sinistros()
+        else:
+            sinistros = data.get('sinistro', load_sinistros(cpfs,estados,causas))
+
         # Atualizar os filtros no contexto da aplicação
         app.config["filters"] = {
             "cpfs": cpfs,
             "estados": estados,
             "causas": causas,
-            "datas": datas
+            "datas": datas,
+            "sinistros":sinistros
         }
 
-        return jsonify({'success': True, 'document_number': cpfs, 'estado': estados, 'causa': causas, "data": datas})
+        return jsonify({'success': True, 'document_number': cpfs, 'estado': estados, 'causa': causas, "data": datas,"sinistros":sinistros})
 
     except Exception as e:
         # Loga o erro e retorna uma mensagem de erro genérica
@@ -138,6 +157,9 @@ def get_clients():
     connection = fc.get_connection()
 
     try:
+        cpfs = tuple(load_cpfs())
+        estados = tuple(load_estados())
+        causas = tuple(load_causas())
         with connection.cursor() as cursor:
             # Consulta para obter todos os CPFs únicos
             cursor.execute("SELECT DISTINCT document_number FROM sddo.sinistros")
@@ -154,10 +176,12 @@ def get_clients():
             cursor.execute("SELECT DISTINCT date FROM sddo.sinistros")
             datas = [row[0] for row in cursor.fetchall()]
 
+            sinistros = load_sinistros(cpfs,estados,causas)
+
     finally:
         connection.close()
 
-    return jsonify({"Cpfs": cpfs, "Estados": estados, "Causas": causas, "Datas": datas})
+    return jsonify({"Cpfs": cpfs, "Estados": estados, "Causas": causas, "Datas": datas,"Sinistros":sinistros})
 
 
 def background_task():
@@ -178,7 +202,12 @@ def background_task():
         df_filtrado_cotacoes = df_filtrado_cotacoes.filter(pl.col("date").is_in(app.config["filters"]["datas"]))
         df_filtrado_emissoes = df_filtrado_emissoes.filter(pl.col("date").is_in(app.config["filters"]["datas"]))
         df_filtrado_sinistros = df_filtrado_sinistros.filter(pl.col("date").is_in(app.config["filters"]["datas"]))
+        print(f" antes de filtrar {df_filtrado_sinistros["id"].sort()}")
 
+        #Filtrando novamente por sinistro
+        print(app.config["filters"]["sinistros"])
+        df_filtrado_sinistros = df_filtrado_sinistros.filter(pl.col("id").is_in(app.config["filters"]["sinistros"]))
+        print(f" na main {df_filtrado_sinistros.head(5)}")
         dicionario_cotacao = fc.retorna_valores_quantidade_por_tempo(
             df_filtrado_cotacoes)
         dicionario_emissao = fc.retorna_valores_quantidade_por_tempo(

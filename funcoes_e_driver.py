@@ -73,15 +73,21 @@ def retorna_valores_quantidade_por_tempo(dataframe):
 
 def retorna_valores_genero(df_filtrado_sinistros):
     try:
+        # print(df_filtrado_sinistros.head(5))
         df_sinistros_M = df_filtrado_sinistros.filter(pl.col('genderNotifier') == 'M')
         df_sinistros_F = df_filtrado_sinistros.filter(pl.col('genderNotifier') == 'F')
+        # print(f"df M {df_filtrado_sinistros["genderNotifier"]}")
         num_sinistros_M = df_sinistros_M.shape[0]
         num_sinistros_F = df_sinistros_F.shape[0]
+        # print(f"M {num_sinistros_M}")
+        # print(f"F {num_sinistros_F}")
+
         if num_sinistros_M == 0 and num_sinistros_F == 0:
             raise ValueError("Não foram encontrados registros para os gêneros especificados.")
         return num_sinistros_M, num_sinistros_F
     except Exception as e:
-        return f"Erro: {str(e)}"
+        print(e)
+        return 0,0
 
 
 def retorna_status_sinistro(df_sinistro_filtrada):
@@ -228,7 +234,8 @@ def retorna_sinistro_por_estado(df_sinistro_filtrado):
 
         return list_of_dicts
     except Exception as e:
-        return f"Erro: {str(e)}"
+        print(e)
+        return 0
 
 def process_data(data):
     # Converter os dados para JSON serializáveis
