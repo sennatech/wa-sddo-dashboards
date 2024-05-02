@@ -202,10 +202,11 @@ def background_task():
         df_filtrado_cotacoes = df_filtrado_cotacoes.filter(pl.col("date").is_in(app.config["filters"]["datas"]))
         df_filtrado_emissoes = df_filtrado_emissoes.filter(pl.col("date").is_in(app.config["filters"]["datas"]))
         df_filtrado_sinistros = df_filtrado_sinistros.filter(pl.col("date").is_in(app.config["filters"]["datas"]))
-        print(f" antes de filtrar {df_filtrado_sinistros["id"].sort()}")
+        # print(f" antes de filtrar {df_filtrado_sinistros["id"].sort()}")
 
         #Filtrando novamente por sinistro
         print(app.config["filters"]["sinistros"])
+        # df_filtrado_sinistros = df_filtrado_sinistros.filter(pl.col("id").is_in(app.config["filters"]["sinistros"]))
         print(f" na main {df_filtrado_sinistros.head(5)}")
         dicionario_cotacao = fc.retorna_valores_quantidade_por_tempo(
             df_filtrado_cotacoes)
@@ -274,6 +275,11 @@ def background_task():
         socketio.sleep(1)
 
         # Aguardar 3 segundos antes de enviar o próximo conjunto de dados
+
+
+@app.route('/health')
+def health_check():
+    return 'OK', 200
 
 
 @socketio.on('connect')
