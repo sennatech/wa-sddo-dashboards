@@ -206,7 +206,6 @@ def background_task():
 
         #Filtrando novamente por sinistro
         print(app.config["filters"]["sinistros"])
-        df_filtrado_sinistros = df_filtrado_sinistros.filter(pl.col("id").is_in(app.config["filters"]["sinistros"]))
         print(f" na main {df_filtrado_sinistros.head(5)}")
         dicionario_cotacao = fc.retorna_valores_quantidade_por_tempo(
             df_filtrado_cotacoes)
