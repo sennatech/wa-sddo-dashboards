@@ -9,7 +9,7 @@ def retorna_dados(cpfs, estados, causas):
     causas = tuple(causas)
 
     select_sql_sinistros = f"""
-    SELECT  * FROM sddo.sinistros
+    SELECT  * FROM dbo.vw_sinistros_status_atual
     WHERE document_number IN {cpfs}
     AND state IN {estados}
     AND notificationType IN {causas}
