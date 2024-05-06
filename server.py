@@ -87,6 +87,7 @@ def load_initial_filters():
     causas = load_causas()
     datas = load_datas()
     sinistros = load_sinistros()
+    reset = True
 
     # Atualizar os filtros no contexto da aplicação
     app.config["filters"] = {
@@ -94,7 +95,8 @@ def load_initial_filters():
         "estados": estados,
         "causas": causas,
         "datas": datas,
-        "sinistros": sinistros
+        "sinistros": sinistros,
+        "reset":reset
     }
 
 
@@ -107,6 +109,10 @@ def set_filtros():
         data = request.json
 
         # Verifica se a lista de CPFs é vazia e carrega todos os CPFs se for
+        if data.get("reset"):
+            reset = True
+        else:
+            reset = False
         if not data.get('document_number'):
             cpfs = load_cpfs()
         else:
@@ -142,11 +148,12 @@ def set_filtros():
             "estados": estados,
             "causas": causas,
             "datas": datas,
-            "sinistros": sinistros
+            "sinistros": sinistros,
+            "reset":reset
         }
 
         return jsonify({'success': True, 'document_number': cpfs, 'estado': estados, 'causa': causas, "data": datas,
-                        "sinistros": sinistros})
+                        "sinistros": sinistros,"reset":reset})
 
     except Exception as e:
         # Loga o erro e retorna uma mensagem de erro genérica
@@ -190,30 +197,36 @@ def background_task(client_id):
             (table_sinistro, table_emissoes, table_cotacoes,
              table_sinistro_tempo_medio, tempo_medio_resposta, preco_medio_cotação,
              apolices_ativas) = tb.retorna_dados()
+            if app.config["filters"]["reset"]:
+                print(f"reset {app.config["filters"]["reset"]}")
+                df_filtrado_cotacoes = table_cotacoes.unique(subset="id")
+                df_filtrado_emissoes = table_emissoes.unique(subset="id")
+                df_filtrado_sinistros = table_sinistro
+            else:
+                df_filtrado_cotacoes = table_cotacoes.filter(
+                    (pl.col('document_number').is_in(app.config["filters"]["cpfs"])) &
+                    (pl.col('address_state').is_in(app.config["filters"]["estados"])) &
+                    (pl.col('coverage').is_in(app.config["filters"]["causas"])) &
+                    (pl.col('date').is_in(app.config["filters"]["datas"]))  # Adicionando filtro de datas
+                ).unique(subset="id")
 
-            df_filtrado_cotacoes = table_cotacoes.filter(
-                (pl.col('document_number').is_in(app.config["filters"]["cpfs"])) &
-                (pl.col('address_state').is_in(app.config["filters"]["estados"])) &
-                (pl.col('coverage').is_in(app.config["filters"]["causas"])) &
-                (pl.col('date').is_in(app.config["filters"]["datas"]))  # Adicionando filtro de datas
-            ).unique(subset="id")
+                # Filtrar emissões por CPFs, estados, causas, e datas
+                df_filtrado_emissoes = table_emissoes.filter(
+                    (pl.col('document_number').is_in(app.config["filters"]["cpfs"])) &
+                    (pl.col('holder_address_state').is_in(app.config["filters"]["estados"])) &
+                    (pl.col('coverage_name').is_in(app.config["filters"]["causas"])) &
+                    (pl.col('date').is_in(app.config["filters"]["datas"]))  # Adicionando filtro de datas
+                ).unique(subset="id")
 
-            # Filtrar emissões por CPFs, estados, causas, e datas
-            df_filtrado_emissoes = table_emissoes.filter(
-                (pl.col('document_number').is_in(app.config["filters"]["cpfs"])) &
-                (pl.col('holder_address_state').is_in(app.config["filters"]["estados"])) &
-                (pl.col('coverage_name').is_in(app.config["filters"]["causas"])) &
-                (pl.col('date').is_in(app.config["filters"]["datas"]))  # Adicionando filtro de datas
-            ).unique(subset="id")
+                # Filtrar sinistros por CPFs, estados, causas, datas, e IDs de sinistros
+                df_filtrado_sinistros = table_sinistro.filter(
+                    (pl.col('document_number').is_in(app.config["filters"]["cpfs"])) &
+                    (pl.col('state').is_in(app.config["filters"]["estados"])) &
+                    (pl.col('notificationType').is_in(app.config["filters"]["causas"])) &
+                    (pl.col('date').is_in(app.config["filters"]["datas"])) & # Adicionando filtro de datas
+                    (pl.col('id').is_in(app.config["filters"]["sinistros"]))  # Adicionando filtro por IDs de sinistros específicos
+                )
 
-            # Filtrar sinistros por CPFs, estados, causas, datas, e IDs de sinistros
-            df_filtrado_sinistros = table_sinistro.filter(
-                (pl.col('document_number').is_in(app.config["filters"]["cpfs"])) &
-                (pl.col('state').is_in(app.config["filters"]["estados"])) &
-                (pl.col('notificationType').is_in(app.config["filters"]["causas"])) &
-                (pl.col('date').is_in(app.config["filters"]["datas"]))   # Adicionando filtro de datas
-                # (pl.col('id').is_in(app.config["filters"]["sinistros"]))  # Adicionando filtro por IDs de sinistros específicos
-            )
 
             #Filtrando por data aqui, para a query não ficar gigantesca
             df_filtrado_cotacoes = df_filtrado_cotacoes.filter(pl.col("date").is_in(app.config["filters"]["datas"]))
