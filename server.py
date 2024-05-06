@@ -69,15 +69,12 @@ def load_causas():
     return causas
 
 
-def load_sinistros(cpfs, estados, causas):
+def load_sinistros():
     connection = fc.get_connection()
     try:
-        cpfs = tuple(cpfs)
-        estados = tuple(estados)
-        causas = tuple(causas)
         with connection.cursor() as cursor:
             cursor.execute(
-                f"SELECT DISTINCT id FROM sddo.sinistros WHERE document_number IN {cpfs}AND state IN {estados} AND notificationType IN {causas}")
+                f"SELECT DISTINCT id FROM sddo.sinistros")
             sinistros = [row[0] for row in cursor.fetchall()]
     finally:
         connection.close()
@@ -89,7 +86,7 @@ def load_initial_filters():
     estados = load_estados()
     causas = load_causas()
     datas = load_datas()
-    sinistros = load_sinistros(cpfs, estados, causas)
+    sinistros = load_sinistros()
 
     # Atualizar os filtros no contexto da aplicação
     app.config["filters"] = {
@@ -110,34 +107,34 @@ def set_filtros():
         data = request.json
 
         # Verifica se a lista de CPFs é vazia e carrega todos os CPFs se for
-        if data.get('document_number') == [""]:
+        if not data.get('document_number'):
             cpfs = load_cpfs()
         else:
             cpfs = data.get('document_number', load_cpfs())  # Usa o fallback para recarregar se não especificado
 
         # Verifica se a lista de estados é vazia e carrega todos os estados se for
-        if data.get('estado') == [""]:
+        if not data.get('estado') :
             estados = load_estados()
         else:
             estados = data.get('estado', load_estados())  # Usa o fallback para recarregar se não especificado
 
         # Verifica se a lista de causas é vazia e carrega todas as causas se for
-        if data.get('causa') == [""]:
+        if not data.get('causa'):
             causas = load_causas()
         else:
             causas = data.get('causa', load_causas())  # Usa o fallback para recarregar se não especificado
 
         # Verifica se a lista de datas é vazia e carrega todas as datas se for
-        if data.get('data') == [""]:
+        if not data.get('data'):
             datas = load_datas()
         else:
             datas = data.get('data', load_datas())
             datas = [datetime.strptime(date, '%Y-%m-%d').date() for date in datas]
 
-        if data.get('sinistro') == [""]:
+        if not data.get('sinistro'):
             sinistros = load_sinistros()
         else:
-            sinistros = data.get('sinistro', load_sinistros(cpfs, estados, causas))
+            sinistros = data.get('sinistro', load_sinistros())
 
         # Atualizar os filtros no contexto da aplicação
         app.config["filters"] = {
@@ -167,31 +164,16 @@ def on_disconnect():
 
 
 @app.route('/filtro_sinistros', methods=['GET'])
-def get_clients():
+def get_filters():
     # Estabelecer conexão com o banco de dados
     connection = fc.get_connection()
 
     try:
-        cpfs = tuple(load_cpfs())
-        estados = tuple(load_estados())
-        causas = tuple(load_causas())
-        with connection.cursor() as cursor:
-            # Consulta para obter todos os CPFs únicos
-            cursor.execute("SELECT DISTINCT document_number FROM sddo.sinistros")
-            cpfs = [row[0] for row in cursor.fetchall()]
-
-            # Consulta para obter todos os estados únicos
-            cursor.execute("SELECT DISTINCT state FROM sddo.sinistros")
-            estados = [row[0] for row in cursor.fetchall()]
-
-            # Consulta para obter todas as causas únicas (notificationType)
-            cursor.execute("SELECT DISTINCT notificationType FROM sddo.sinistros")
-            causas = [row[0] for row in cursor.fetchall()]
-
-            cursor.execute("SELECT DISTINCT date FROM sddo.sinistros")
-            datas = [row[0] for row in cursor.fetchall()]
-
-            sinistros = load_sinistros(cpfs, estados, causas)
+        cpfs = load_cpfs()
+        estados = load_estados()
+        causas = load_causas()
+        datas = load_datas()
+        sinistros = load_sinistros()
 
     finally:
         connection.close()
@@ -207,13 +189,31 @@ def background_task(client_id):
 
             (table_sinistro, table_emissoes, table_cotacoes,
              table_sinistro_tempo_medio, tempo_medio_resposta, preco_medio_cotação,
-             apolices_ativas) = tb.retorna_dados(cpfs=app.config["filters"]["cpfs"],
-                                                 estados=app.config["filters"]["estados"],
-                                                 causas=app.config["filters"]["causas"])
+             apolices_ativas) = tb.retorna_dados()
 
-            df_filtrado_cotacoes = table_cotacoes.unique(subset="id")
-            df_filtrado_emissoes = table_emissoes.unique(subset="id")
-            df_filtrado_sinistros = table_sinistro.unique(subset="id")
+            df_filtrado_cotacoes = table_cotacoes.filter(
+                (pl.col('document_number').is_in(app.config["filters"]["cpfs"])) &
+                (pl.col('address_state').is_in(app.config["filters"]["estados"])) &
+                (pl.col('coverage').is_in(app.config["filters"]["causas"])) &
+                (pl.col('date').is_in(app.config["filters"]["datas"]))  # Adicionando filtro de datas
+            ).unique(subset="id")
+
+            # Filtrar emissões por CPFs, estados, causas, e datas
+            df_filtrado_emissoes = table_emissoes.filter(
+                (pl.col('document_number').is_in(app.config["filters"]["cpfs"])) &
+                (pl.col('holder_address_state').is_in(app.config["filters"]["estados"])) &
+                (pl.col('coverage_name').is_in(app.config["filters"]["causas"])) &
+                (pl.col('date').is_in(app.config["filters"]["datas"]))  # Adicionando filtro de datas
+            ).unique(subset="id")
+
+            # Filtrar sinistros por CPFs, estados, causas, datas, e IDs de sinistros
+            df_filtrado_sinistros = table_sinistro.filter(
+                (pl.col('document_number').is_in(app.config["filters"]["cpfs"])) &
+                (pl.col('state').is_in(app.config["filters"]["estados"])) &
+                (pl.col('notificationType').is_in(app.config["filters"]["causas"])) &
+                (pl.col('date').is_in(app.config["filters"]["datas"])) &  # Adicionando filtro de datas
+                (pl.col('id').is_in(app.config["filters"]["sinistros"]))  # Adicionando filtro por IDs de sinistros específicos
+            )
 
             #Filtrando por data aqui, para a query não ficar gigantesca
             df_filtrado_cotacoes = df_filtrado_cotacoes.filter(pl.col("date").is_in(app.config["filters"]["datas"]))
