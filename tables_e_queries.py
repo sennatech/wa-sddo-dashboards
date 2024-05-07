@@ -3,25 +3,15 @@ import polars as pl
 
 
 # Queries SQL
-def retorna_dados(cpfs, estados, causas):
-    cpfs = tuple(cpfs)
-    estados = tuple(estados)
-    causas = tuple(causas)
+def retorna_dados():
 
     select_sql_sinistros = f"""
-    SELECT  * FROM sddo.sinistros
-    WHERE document_number IN {cpfs}
-    AND state IN {estados}
-    AND notificationType IN {causas}
+    SELECT  * FROM dbo.vw_sinistros_status_atual
     """
     # print(f"sql sinisstros {select_sql_sinistros}")
 
     select_sql_emissoes = f"""
     SELECT  * FROM sddo.emissoes
-    WHERE document_number IN {cpfs}
-    AND holder_address_state IN {estados}
-    AND coverage_name IN {causas}        
-
     """
 
     # print(f"sql emissao  {select_sql_emissoes}")
@@ -29,10 +19,6 @@ def retorna_dados(cpfs, estados, causas):
 
     select_sql_cotacoes = f"""
     SELECT  * FROM sddo.cotacoes
-    WHERE document_number IN {cpfs}
-    AND address_state IN {estados}
-    AND coverage IN {causas}    
-
     """
     # print(f"sql cotcao  {select_sql_cotacoes}")
 
