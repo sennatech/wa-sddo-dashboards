@@ -161,23 +161,27 @@ def calc_status_stats(recusado, pendente, aprovado, total):
 
 
 def calcular_porcentagem_ids_unicos_pl(df1, df2, coluna_id='id'):
-    coluna_id_sinistros = "policy_number"
-    # Encontra os IDs únicos em cada DataFrame
-    ids_unicos_df1 = df1.select(coluna_id_sinistros).unique()
-    ids_unicos_df2 = df2.select(coluna_id).unique()
+    try:
+        coluna_id_sinistros = "policy_number"
+        # Encontra os IDs únicos em cada DataFrame
+        ids_unicos_df1 = df1.select(coluna_id_sinistros).unique()
+        ids_unicos_df2 = df2.select(coluna_id).unique()
 
-    # Calcula a diferença de conjuntos para encontrar IDs em df1 que não estão em df2
-    len_df1 = len(ids_unicos_df1)
-    len_df2 = len(ids_unicos_df2)
-    diferenca = len_df2 - len_df1
+        # Calcula a diferença de conjuntos para encontrar IDs em df1 que não estão em df2
+        len_df1 = len(ids_unicos_df1)
+        len_df2 = len(ids_unicos_df2)
 
-    porcentagem = round(((diferenca / len_df2) * 100), 0)
-    # print(porcentagem)
+        if len_df2 == 0:  # Proteção contra divisão por zero
+            return 0
 
-    # print(ids_diferentes)
-    # Calcula a porcentagem de IDs únicos em df1 em relação ao total de IDs únicos em df2
+        diferenca = len_df2 - len_df1
+        porcentagem = round(((diferenca / len_df2) * 100), 0)
 
-    return porcentagem
+        return porcentagem
+
+    except Exception as e:
+        print(f"Erro ao calcular a porcentagem: {e}")
+        return 0  # Retorna 0 ou outro valor que represente um erro no cálculo
 
 
 
@@ -236,6 +240,71 @@ def retorna_sinistro_por_estado(df_sinistro_filtrado):
     except Exception as e:
         print(e)
         return 0
+
+def apply_filters_cotacao(df, filters):
+    query = []
+
+    if filters['cpfs']:
+        query.append(pl.col('document_number').is_in(filters['cpfs']))
+    if filters['estados']:
+        query.append(pl.col('address_state').is_in(filters['estados']))
+    if filters['causas']:
+        query.append(pl.col('coverage').is_in(filters['causas']))
+    if filters['datas']:
+        query.append(pl.col('date').is_in(filters['datas']))
+
+    if not query:
+        return df  # Return the dataframe as is if no filters are applied
+
+    final_query = query[0]
+    for q in query[1:]:
+        final_query &= q
+
+    return df.filter(final_query).unique(subset="id")
+
+def apply_filters_emissao(df, filters):
+    query = []
+
+    if filters['cpfs']:
+        query.append(pl.col('document_number').is_in(filters['cpfs']))
+    if filters['estados']:
+        query.append(pl.col('holder_address_state').is_in(filters['estados']))
+    if filters['causas']:
+        query.append(pl.col('coverage_name').is_in(filters['causas']))
+    if filters['datas']:
+        query.append(pl.col('date').is_in(filters['datas']))
+
+    if not query:
+        return df  # Return the dataframe as is if no filters are applied
+
+    final_query = query[0]
+    for q in query[1:]:
+        final_query &= q
+
+    return df.filter(final_query).unique(subset="id")
+
+def apply_filters_sinistro(df, filters):
+    query = []
+
+    if filters['cpfs']:
+        query.append(pl.col('document_number').is_in(filters['cpfs']))
+    if filters['estados']:
+        query.append(pl.col('state').is_in(filters['estados']))
+    if filters['causas']:
+        query.append(pl.col('notificationType').is_in(filters['causas']))
+    if filters['datas']:
+        query.append(pl.col('date').is_in(filters['datas']))
+    if filters['sinistros']:
+        query.append(pl.col('id').is_in(filters['sinistros']))
+
+    if not query:
+        return df  # Return the dataframe as is if no filters are applied
+
+    final_query = query[0]
+    for q in query[1:]:
+        final_query &= q
+
+    return df.filter(final_query).unique(subset="id")
 
 def process_data(data):
     # Converter os dados para JSON serializáveis

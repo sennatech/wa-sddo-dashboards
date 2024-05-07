@@ -3,28 +3,21 @@ from flask import Flask, request, jsonify
 from flask_socketio import SocketIO, emit
 import tables_e_queries as tb
 import funcoes_e_driver as fc
-import polars as pl
-from datetime import date, datetime
+from datetime import datetime
 from threading import Thread
-from flask_socketio import disconnect
-
-# Configurar localização
-
-# Instanciar o aplicativo Flask
+import polars as pl
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Configurar cookies de sessão
 app.config.update(
     SESSION_COOKIE_SAMESITE='None',
     SESSION_COOKIE_SECURE=True
 )
 
 client_tasks = {}
+client_filters = {}
 
-
-# Inicializar filtros como dicionário no contexto da aplicação
-
+# Função para carregar dados iniciais ou recarregar quando necessário
 def load_cpfs():
     connection = fc.get_connection()
     try:
@@ -34,7 +27,6 @@ def load_cpfs():
     finally:
         connection.close()
     return cpfs
-
 
 def load_estados():
     connection = fc.get_connection()
@@ -46,7 +38,6 @@ def load_estados():
         connection.close()
     return estados
 
-
 def load_datas():
     connection = fc.get_connection()
     try:
@@ -56,7 +47,6 @@ def load_datas():
     finally:
         connection.close()
     return datas
-
 
 def load_causas():
     connection = fc.get_connection()
@@ -68,174 +58,117 @@ def load_causas():
         connection.close()
     return causas
 
-
 def load_sinistros():
     connection = fc.get_connection()
     try:
         with connection.cursor() as cursor:
-            cursor.execute(
-                f"SELECT DISTINCT id FROM sddo.sinistros")
+            cursor.execute("SELECT DISTINCT id FROM sddo.sinistros")
             sinistros = [row[0] for row in cursor.fetchall()]
     finally:
         connection.close()
     return sinistros
 
-
-def load_initial_filters():
-    cpfs = load_cpfs()
-    estados = load_estados()
-    causas = load_causas()
-    datas = load_datas()
-    sinistros = load_sinistros()
-    reset = True
-
-    # Atualizar os filtros no contexto da aplicação
-    app.config["filters"] = {
-        "cpfs": cpfs,
-        "estados": estados,
-        "causas": causas,
-        "datas": datas,
-        "sinistros": sinistros,
-        "reset":reset
+def get_default_filters():
+    return {
+        "cpfs": load_cpfs(),
+        "estados": load_estados(),
+        "causas": load_causas(),
+        "datas": load_datas(),
+        "sinistros": load_sinistros(),
+        "reset": True
     }
 
-
-# Definir uma rota Flask para receber os filtros via POST
-
-
-@app.route('/filtros', methods=['POST'])
-def set_filtros():
-    try:
-        data = request.json
-
-        # Verifica se a lista de CPFs é vazia e carrega todos os CPFs se for
-        if data.get("reset"):
-            reset = True
-        else:
-            reset = False
-        if not data.get('document_number'):
-            cpfs = load_cpfs()
-        else:
-            cpfs = data.get('document_number', load_cpfs())  # Usa o fallback para recarregar se não especificado
-
-        # Verifica se a lista de estados é vazia e carrega todos os estados se for
-        if not data.get('estado') :
-            estados = load_estados()
-        else:
-            estados = data.get('estado', load_estados())  # Usa o fallback para recarregar se não especificado
-
-        # Verifica se a lista de causas é vazia e carrega todas as causas se for
-        if not data.get('causa'):
-            causas = load_causas()
-        else:
-            causas = data.get('causa', load_causas())  # Usa o fallback para recarregar se não especificado
-
-        # Verifica se a lista de datas é vazia e carrega todas as datas se for
-        if not data.get('data'):
-            datas = load_datas()
-        else:
-            datas = data.get('data', load_datas())
-            datas = [datetime.strptime(date, '%Y-%m-%d').date() for date in datas]
-
-        if not data.get('sinistro'):
-            sinistros = load_sinistros()
-        else:
-            sinistros = data.get('sinistro', load_sinistros())
-
-        # Atualizar os filtros no contexto da aplicação
-        app.config["filters"] = {
-            "cpfs": cpfs,
-            "estados": estados,
-            "causas": causas,
-            "datas": datas,
-            "sinistros": sinistros,
-            "reset":reset
-        }
-
-        return jsonify({'success': True, 'document_number': cpfs, 'estado': estados, 'causa': causas, "data": datas,
-                        "sinistros": sinistros,"reset":reset})
-
-    except Exception as e:
-        # Loga o erro e retorna uma mensagem de erro genérica
-        app.logger.error(f"An error occurred: {e}")
-        return jsonify({'success': False, 'message': 'An error occurred while processing your request'}), 500
-
-
-@socketio.on('disconnect')
-def on_disconnect():
+@socketio.on('update_filters')
+def handle_update_filters(data):
     client_id = request.sid
-    print(f'Client {client_id} disconnected')
-    if client_id in client_tasks:
-        client_tasks[client_id] = False  # Sinalizando para a tarefa parar
-        print(f'Task marked to stop for client {client_id}')
+    print(f"Receiving new filters from client {client_id}")
+    # Aqui você pode adicionar uma validação dos dados recebidos antes de atualizar
+    filters = {
+        "cpfs": data.get('document_number', []),
+        "estados": data.get('estado', []),
+        "causas": data.get('causa', []),
+        "datas": [datetime.strptime(date, '%Y-%m-%d').date() for date in data.get('data', [])],
+        "sinistros": data.get('sinistro', []),
+        "reset": data.get("reset", False)
+    }
+    client_filters[client_id] = filters
+    emit('filters_updated', {'success': True})  # Confirma a atualização dos filtros
 
 
-@app.route('/filtro_sinistros', methods=['GET'])
-def get_filters():
-    # Estabelecer conexão com o banco de dados
-    connection = fc.get_connection()
 
-    try:
-        cpfs = load_cpfs()
-        estados = load_estados()
-        causas = load_causas()
-        datas = load_datas()
-        sinistros = load_sinistros()
+# @app.route('/filtros', methods=['POST'])
+# def set_filtros():
+#     client_id = request.sid
+#     data = request.json
+#     filters = {
+#         "cpfs": data.get('document_number', load_cpfs()),
+#         "estados": data.get('estado', load_estados()),
+#         "causas": data.get('causa', load_causas()),
+#         "datas": [datetime.strptime(date, '%Y-%m-%d').date() for date in data.get('data', load_datas())],
+#         "sinistros": data.get('sinistro', load_sinistros()),
+#         "reset": data.get("reset", False)
+#     }
+#     client_filters[client_id] = filters
+#     return jsonify({'success': True})
 
-    finally:
-        connection.close()
-
-    return jsonify({"Cpfs": cpfs, "Estados": estados, "Causas": causas, "Datas": datas, "Sinistros": sinistros})
-
+@socketio.on('connect')
+def on_connect():
+    client_id = request.sid
+    client_tasks[client_id] = True
+    client_filters[client_id] = get_default_filters()
+    print(f'Client {client_id} connected, starting background task.')
+    socketio.start_background_task(background_task, client_id)
 
 def background_task(client_id):
-    """Função que roda em background para enviar dados periodicamente."""
     try:
         while client_tasks.get(client_id, False):
+            filters = client_filters.get(client_id, get_default_filters())  # Get filters for the specific client
+            print(f"filters: {filters}")
             print(f'Preparing to send data to client {client_id}')
 
             (table_sinistro, table_emissoes, table_cotacoes,
              table_sinistro_tempo_medio, tempo_medio_resposta, preco_medio_cotação,
              apolices_ativas) = tb.retorna_dados()
-            if app.config["filters"]["reset"]:
-                print(f"reset {app.config["filters"]["reset"]}")
+            if filters["reset"]:
+                print(f"Reset is {filters['reset']}")
                 df_filtrado_cotacoes = table_cotacoes.unique(subset="id")
                 df_filtrado_emissoes = table_emissoes.unique(subset="id")
                 df_filtrado_sinistros = table_sinistro
             else:
-                df_filtrado_cotacoes = table_cotacoes.filter(
-                    (pl.col('document_number').is_in(app.config["filters"]["cpfs"])) &
-                    (pl.col('address_state').is_in(app.config["filters"]["estados"])) &
-                    (pl.col('coverage').is_in(app.config["filters"]["causas"])) &
-                    (pl.col('date').is_in(app.config["filters"]["datas"]))  # Adicionando filtro de datas
-                ).unique(subset="id")
+                df_filtrado_cotacoes = fc.apply_filters_cotacao(table_cotacoes, filters)
+                #     table_cotacoes.filter(
+                #     (pl.col('document_number').is_in(filters["cpfs"])) &
+                #     (pl.col('address_state').is_in(filters["estados"])) &
+                #     (pl.col('coverage').is_in(filters["causas"])) &
+                #     (pl.col('date').is_in(filters["datas"]))  # Adding date filter
+                # ).unique(subset="id")
 
-                # Filtrar emissões por CPFs, estados, causas, e datas
-                df_filtrado_emissoes = table_emissoes.filter(
-                    (pl.col('document_number').is_in(app.config["filters"]["cpfs"])) &
-                    (pl.col('holder_address_state').is_in(app.config["filters"]["estados"])) &
-                    (pl.col('coverage_name').is_in(app.config["filters"]["causas"])) &
-                    (pl.col('date').is_in(app.config["filters"]["datas"]))  # Adicionando filtro de datas
-                ).unique(subset="id")
+                df_filtrado_emissoes = fc.apply_filters_emissao(table_emissoes, filters)
+                # table_emissoes.filter(
+                #     (pl.col('document_number').is_in(filters["cpfs"])) &
+                #     (pl.col('holder_address_state').is_in(filters["estados"])) &
+                #     (pl.col('coverage_name').is_in(filters["causas"])) &
+                #     (pl.col('date').is_in(filters["datas"]))  # Adding date filter
+                # ).unique(subset="id")
 
-                # Filtrar sinistros por CPFs, estados, causas, datas, e IDs de sinistros
-                df_filtrado_sinistros = table_sinistro.filter(
-                    (pl.col('document_number').is_in(app.config["filters"]["cpfs"])) &
-                    (pl.col('state').is_in(app.config["filters"]["estados"])) &
-                    (pl.col('notificationType').is_in(app.config["filters"]["causas"])) &
-                    (pl.col('date').is_in(app.config["filters"]["datas"])) & # Adicionando filtro de datas
-                    (pl.col('id').is_in(app.config["filters"]["sinistros"]))  # Adicionando filtro por IDs de sinistros específicos
-                )
+                # Similar filtering can be applied for sinistros if needed
+                df_filtrado_sinistros = fc.apply_filters_sinistro(table_sinistro, filters)
+                #     table_sinistro.filter(
+                #     (pl.col('document_number').is_in(filters["cpfs"])) &
+                #     (pl.col('state').is_in(filters["estados"])) &
+                #     (pl.col('notificationType').is_in(filters["causas"])) &
+                #     (pl.col('date').is_in(filters["datas"])) &  # Adding date filter
+                #     (pl.col('id').is_in(filters["sinistros"]))  # Adding filter for specific sinistro IDs
+                # )
 
-
-            #Filtrando por data aqui, para a query não ficar gigantesca
-            df_filtrado_cotacoes = df_filtrado_cotacoes.filter(pl.col("date").is_in(app.config["filters"]["datas"]))
-            df_filtrado_emissoes = df_filtrado_emissoes.filter(pl.col("date").is_in(app.config["filters"]["datas"]))
-            df_filtrado_sinistros = df_filtrado_sinistros.filter(pl.col("date").is_in(app.config["filters"]["datas"]))
+            # Filtrando por data aqui, para a query não ficar gigantesca
+            # df_filtrado_cotacoes = df_filtrado_cotacoes.filter(pl.col("date").is_in(app.config["filters"]["datas"]))
+            # df_filtrado_emissoes = df_filtrado_emissoes.filter(pl.col("date").is_in(app.config["filters"]["datas"]))
+            # df_filtrado_sinistros = df_filtrado_sinistros.filter(pl.col("date").is_in(app.config["filters"]["datas"]))
             # print(f" antes de filtrar {df_filtrado_sinistros["id"].sort()}")
 
-            #Filtrando novamente por sinistro
-            print(app.config["filters"]["sinistros"])
+            # Filtrando novamente por sinistro
+            # print(app.config["filters"]["sinistros"])
             # df_filtrado_sinistros = df_filtrado_sinistros.filter(pl.col("id").is_in(app.config["filters"]["sinistros"]))
             print(f" na main {df_filtrado_sinistros.head(5)}")
             dicionario_cotacao = fc.retorna_valores_quantidade_por_tempo(
@@ -301,7 +234,7 @@ def background_task(client_id):
             data = fc.process_data(arrays)
             # Usar o emit dentro do contexto do SocketIO para enviar para todos os clientes conectados
             print(f"dados enviados {data}")
-            socketio.emit('response_data', data)
+            socketio.emit('response_data', data,to=client_id)
             print(f"Enviando dados para o cliente {client_id}")
             if not client_tasks.get(client_id, True):
                 # Verifica se a tarefa deve continuar
@@ -310,45 +243,20 @@ def background_task(client_id):
                 break
             socketio.sleep(1)
     finally:
-        print(f'Background task ending for client {client_id}')
-        client_tasks.pop(client_id, None)  # Remove a entrada para limpeza
+        client_tasks.pop(client_id, None)
+        client_filters.pop(client_id, None)
 
-    # Aguardar 3 segundos antes de enviar o próximo conjunto de dados
-
+@socketio.on('disconnect')
+def on_disconnect():
+    client_id = request.sid
+    print(f'Client {client_id} disconnected')
+    client_tasks.pop(client_id, None)
+    client_filters.pop(client_id, None)
 
 @app.route('/health')
 def health_check():
     return 'OK', 200
 
-
-@socketio.on('connect')
-def on_connect():
-    client_id = request.sid
-    client_tasks[client_id] = True  # Inicializa a tarefa como ativa
-    print(f'Client {client_id} connected, starting background task.')
-    socketio.start_background_task(background_task, client_id)
-
-
-def start_background_task():
-    thread = Thread(target=background_task())
-    thread.start()
-
-
-def load_initial_filters_thread():
-    thread = Thread(target=load_initial_filters)
-    thread.start()
-
-
 if __name__ == '__main__':
-    # Create a thread to load filters
-    filter_thread = Thread(target=load_initial_filters)
-
-    # Start the thread
-    filter_thread.start()
-
-    # Wait for the filter loading thread to complete
-    filter_thread.join()
-
-    # Start the Flask-SocketIO server
     print("Starting server...")
     socketio.run(app, host='0.0.0.0', port=8054, debug=True, allow_unsafe_werkzeug=True)
