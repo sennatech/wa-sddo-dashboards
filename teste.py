@@ -1,5 +1,5 @@
 import json
-
+import plotly.express as px
 import pandas as pd
 import funcoes as fc
 import queries
@@ -24,3 +24,7 @@ import  tables_e_driver_sql as tb
 # ])
 # print(tb.select_columns)
 # select_columns = [tb.select_columns]
+table_sinistros = tb.table_sinistros
+print(table_sinistros.shape)
+table_sinistros_unica = pd.DataFrame(fc.retira_duplicadas_sinistro(fc.transforma_query_em_sql(queries.select_sql_sinistros))).reset_index()
+print(table_sinistros_unica.shape)

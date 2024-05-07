@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/sddo.iml" filepath="$PROJECT_DIR$/.idea/sddo.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/poc_websockets.iml" filepath="$PROJECT_DIR$/.idea/poc_websockets.iml" />
     </modules>
   </component>
 </project>
