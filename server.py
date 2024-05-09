@@ -198,7 +198,6 @@ def background_task(client_id):
              table_sinistro_tempo_medio, tempo_medio_resposta, preco_medio_cotação,
              apolices_ativas) = tb.retorna_dados()
             if app.config["filters"]["reset"]:
-                print(f"reset {app.config["filters"]["reset"]}")
                 df_filtrado_cotacoes = table_cotacoes.unique(subset="id")
                 df_filtrado_emissoes = table_emissoes.unique(subset="id")
                 df_filtrado_sinistros = table_sinistro
