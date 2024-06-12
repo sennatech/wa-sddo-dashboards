@@ -32,13 +32,13 @@ def transforma_query_em_sql(sql_query):
             df = pl.read_database(query=sql_query, connection=crsr)
             crsr.close()
 #################################
-            # Certifique-se de que 'date' está em formato datetime, se aplicável
-            if 'date' in df.columns:
-                df = df.with_columns(pl.col('date').str.strptime(pl.Date, '%Y-%m-%d'))
+#            # Certifique-se de que 'date' está em formato datetime, se aplicável
+#            if 'date' in df.columns:
+#                df = df.with_columns(pl.col('date').str.strptime(pl.Date, '%Y-%m-%d'))
 
             # Verificação: Imprima os dados carregados
-            print("Dados carregados:")
-            print(df)
+ #           print("Dados carregados:")
+ #           print(df)
 #################################
             if df.shape[0] == 0:
                 raise ValueError("DataFrame vazio após a consulta SQL.")
