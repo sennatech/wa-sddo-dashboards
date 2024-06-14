@@ -222,8 +222,8 @@ def background_task(client_id):
                     (pl.col('document_number').is_in(app.config["filters"]["cpfs"])) &
                     (pl.col('state').is_in(app.config["filters"]["estados"])) &
                     (pl.col('notificationType').is_in(app.config["filters"]["causas"])) &
-                    (pl.col('date').is_in(app.config["filters"]["datas"])) & # Adicionando filtro de datas
-                    (pl.col('id').is_in(app.config["filters"]["sinistros"]))  # Adicionando filtro por IDs de sinistros específicos
+                    (pl.col('date').is_in(app.config["filters"]["datas"])) #& # Adicionando filtro de datas
+                    #(pl.col('id').is_in(app.config["filters"]["sinistros"]))  # Adicionando filtro por IDs de sinistros específicos
                 )
 
 
